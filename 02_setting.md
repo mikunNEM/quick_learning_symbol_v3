@@ -71,6 +71,10 @@ document.getElementsByTagName('head')[0].appendChild(script);
 
 ```js
 const symbolSdk = (await import('https://www.unpkg.com/symbol-sdk@latest/dist/bundle.web.js')).default;
+
+// Buffer を読み込んでおく
+(script = document.createElement('script')).src = 'https://bundle.run/buffer@6.0.3';
+document.getElementsByTagName('head')[0].appendChild(script);
 ```
 
 続いて、ほぼすべての章で利用する共通ロジック部分を実行しておきます。
@@ -100,6 +104,7 @@ function clog(signedTx){
 
 ```js
 const NODE = window.origin; //現在開いているページのURLがここに入ります
+const Buffer = buffer.Buffer;
 
 fetch(
   new URL('/node/info', NODE),
