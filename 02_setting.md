@@ -60,12 +60,22 @@ Aliceとの送受信用のアカウントとして各章で必要に応じて作
 
 F12キーを押して開発者コンソールを開き、以下のスクリプトを入力します。
 
+#### v2
+
 ```js
 (script = document.createElement('script')).src = 'https://xembook.github.io/nem2-browserify/symbol-sdk-pack-2.0.3.js';
 document.getElementsByTagName('head')[0].appendChild(script);
 ```
 
+#### v3
+
+```js
+const symbolSdk = (await import('https://www.unpkg.com/symbol-sdk@latest/dist/bundle.web.js')).default;
+```
+
 続いて、ほぼすべての章で利用する共通ロジック部分を実行しておきます。
+
+#### v2
 
 ```js
 NODE = window.origin; //現在開いているページのURLがここに入ります
@@ -84,6 +94,39 @@ function clog(signedTx){
     console.log("https://symbol.fyi/transactions/" + signedTx.hash);
     console.log("https://testnet.symbol.fyi/transactions/" + signedTx.hash);
 }
+```
+
+#### v3
+
+```js
+const NODE = window.origin; //現在開いているページのURLがここに入ります
+
+fetch(
+  new URL('/node/info', NODE),
+  {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' },
+  }
+)
+.then((res) => res.json())
+.then((json) => {
+  networkType = json.networkIdentifier;
+  generationHash = json.networkGenerationHashSeed;
+});
+fetch(
+  new URL('/network/properties', NODE),
+  {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' },
+  }
+)
+.then((res) => res.json())
+.then((json) => {
+  e = json.network.epochAdjustment;
+  epochAdjustment = Number(e.substring(0, e.length - 1));
+  identifier = json.network.identifier;                   // v3 only
+  facade = new symbolSdk.facade.SymbolFacade(identifier); // v3 only
+});
 ```
 
 これで準備完了です。  
