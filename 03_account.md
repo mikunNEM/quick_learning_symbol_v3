@@ -283,6 +283,17 @@ accountInfo.mosaics.forEach(mosaic => {
 大きすぎるid値をcompactで数値変換するとエラーが発生することがあります。  
 `Compacted value is greater than Number.Max_Value.`
 
+#### BigInt
+
+v3 では所々で JavaScript の `BigInt` が使用されています。
+以降の章で登場するため、ここで構文を紹介します。
+
+```js
+12345n;           // 数値の後ろに n を付ける
+BigInt(12345);    // BigInt(数値)
+0x12345n;         // 16進数も同様
+BigInt(0x12345);
+```
 
 #### 表示桁数の調整
 
