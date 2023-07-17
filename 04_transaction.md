@@ -981,14 +981,14 @@ innerTx1 = facade.transactionFactory.createEmbedded({
   type: 'transfer_transaction_v1',      // Txタイプ:転送Tx
   signerPublicKey: aliceKey.publicKey,  // 署名者公開鍵
   recipientAddress: bobAddress.toString(),
-  message: new Uint8Array([0x00,...(new TextEncoder('utf-8')).encode('tx1')]) //　平文メッセージ
+  message: new Uint8Array([0x00,...(new TextEncoder('utf-8')).encode('tx1')]) // 平文メッセージ
 });
 
 innerTx2 = facade.transactionFactory.createEmbedded({
   type: 'transfer_transaction_v1',      // Txタイプ:転送Tx
   signerPublicKey: aliceKey.publicKey,  // 署名者公開鍵
   recipientAddress: carolAddress.toString(),
-  message: new Uint8Array([0x00,...(new TextEncoder('utf-8')).encode('tx2')]) //　平文メッセージ
+  message: new Uint8Array([0x00,...(new TextEncoder('utf-8')).encode('tx2')]) // 平文メッセージ
 });
 
 // マークルハッシュの算出
