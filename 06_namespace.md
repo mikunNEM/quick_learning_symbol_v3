@@ -231,7 +231,8 @@ console.log(endDate);
 #### v3
 
 ```js
-namespaceId = symbolSdk.symbol.generateNamespaceId("xembook");
+namespaceIds = symbolSdk.symbol.generateNamespacePath("xembook"); // ルートネームスペース
+namespaceId = namespaceIds[namespaceIds.length - 1];
 
 nsInfo = await fetch(
   new URL('/namespaces/' + namespaceId.toString(16).toUpperCase(), NODE),
@@ -361,8 +362,8 @@ await txRepo.announce(signedTx).toPromise();
 
 ```js
 // リンクするネームスペースとモザイクの設定
-rootNameId = symbolSdk.symbol.generateNamespaceId("xembook"); // サブネームスペースをリンクする場合はルートネームスペースから辿る
-namespaceId = symbolSdk.symbol.generateNamespaceId("tomato", rootNameId);
+namespaceIds = symbolSdk.symbol.generateNamespacePath("xembook.tomato");
+namespaceId = namespaceIds[namespaceIds.length - 1];
 mosaicId = new symbolSdk.symbol.MosaicId(0x3A8416DB2D53xxxxn);
 
 // Tx作成
@@ -481,8 +482,8 @@ await txRepo.announce(signedTx).toPromise();
 
 ```js
 // address = new symbolSdk.symbol.Address("*****");
-rootId = symbolSdk.symbol.generateNamespaceId("xembook");
-nameId = symbolSdk.symbol.generateNamespaceId("tomato", rootId);
+namespaceIds = symbolSdk.symbol.generateNamespacePath("xembook.tomato");
+namespaceId = namespaceIds[namespaceIds.length - 1];
 
 // Tx作成
 tx = facade.transactionFactory.create({
@@ -492,8 +493,8 @@ tx = facade.transactionFactory.create({
   recipientAddress: address,
   mosaics: [
     {
-      mosaicId: nameId, // UnresolvedMosaic:未解決モザイク
-      amount: 1n        // 送信量
+      mosaicId: namespaceId,  // UnresolvedMosaic:未解決モザイク
+      amount: 1n              // 送信量
     }
   ],
   message: new Uint8Array()
@@ -535,8 +536,8 @@ Idは内部ではUint64と呼ばれる数値 `{lower: 1106554862, higher: 388049
 #### v3
 
 ```js
-rootId = symbolSdk.symbol.generateNamespaceId("symbol");
-namespaceId = symbolSdk.symbol.generateNamespaceId("xym", rootId);
+namespaceIds = symbolSdk.symbol.generateNamespacePath("symbol.xym");
+namespaceId = namespaceIds[namespaceIds.length - 1];
 ```
 ```js
 > 16666583871264174062n
@@ -652,8 +653,8 @@ NamespaceInfo
 #### v3
 
 ```js
-rootId = symbolSdk.symbol.generateNamespaceId("xembook");
-nameId = symbolSdk.symbol.generateNamespaceId("tomato", rootId);
+namespaceIds = symbolSdk.symbol.generateNamespacePath("xembook.tomato");
+nameId = namespaceIds[namespaceIds.length - 1];
 namespaceInfo = await fetch(
   new URL('/namespaces/' + nameId.toString(16).toUpperCase(), NODE),
   {
@@ -806,7 +807,7 @@ ResolutionTypeは以下の通りです。
 
 #### v3
 
-v3 では、ネームスペースを紐づけている対象によって変わる。
+v3 では、ネームスペースを紐づけている対象によってアクセスする際のURLが異なります。
 
 ##### アドレスの場合
 
