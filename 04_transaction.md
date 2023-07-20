@@ -1006,12 +1006,12 @@ aggregateTx = facade.transactionFactory.create({
   transactionsHash: merkleHash,
   transactions: embeddedTransactions
 });
-aggregateTx.fee = new symbolSdk.symbol.Amount(BigInt(aggregateTx.size * 100)); //手数料
+aggregateTx.fee = new symbolSdk.symbol.Amount(1000000n); //手数料
 
 // 署名とアナウンス
 sig = facade.signTransaction(aliceKey, aggregateTx);
 jsonPayload = facade.transactionFactory.constructor.attachSignature(aggregateTx, sig);
-res = await fetch(
+await fetch(
   new URL('/transactions', NODE),
   {
     method: 'PUT',
@@ -1023,7 +1023,6 @@ res = await fetch(
 .then((json) => {
   return json;
 });
-console.log(res);
 ```
 
 まず、アグリゲートトランザクションに含めるトランザクションを作成します。
@@ -1033,6 +1032,41 @@ console.log(res);
 後の章での解説で「Bobの送信トランザクションをAliceが署名する」といった事が起こり得るためこのような書き方をします。
 これはSymbolブロックチェーンでトランザクションを扱ううえで最も重要な概念になります。
 なお、本章で扱うトランザクションは同じAliceですので、アグリゲートボンデッドトランザクションへの署名もAliceを指定します。
+
+### アグリゲートトランザクションにおける最大手数料
+
+アグリゲートトランザクションも通常のトランザクション同様、最大手数料を直接指定する方法とfeeMultiprierで指定する方法があります。
+先の例では最大手数料を直接指定する方法を使用しました。ここではfeeMultiprierで指定する方法を紹介します。
+
+#### v2
+
+```js
+aggregateTx = sym.AggregateTransaction.createComplete(
+  sym.Deadline.create(epochAdjustment),
+  [tx.toAggregate(alice.publicAccount)],
+  networkType,[]
+).setMaxFeeForAggregate(100, 1); // 第二引数に必要な連署者の数を指定
+```
+
+#### v3
+
+```js
+// アグリゲートTx作成
+aggregateTx = facade.transactionFactory.create({
+  type: 'aggregate_complete_transaction_v2',
+  signerPublicKey: aliceKey.publicKey,  // 署名者公開鍵
+  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+  transactionsHash: merkleHash,
+  transactions: embeddedTransactions
+});
+
+// 連署により追加される連署情報のサイズを追加して最終的なTxサイズを算出する
+requiredCosignatures = 1; // 必要な連署者の数を指定
+calculatedCosignatures = requiredCosignatures > aggregateTx.cosignatures.length ? requiredCosignatures : aggregateTx.cosignatures.length;
+sizePerCosignature = 8 + 32 + 64;
+calculatedSize = aggregateTx.size - aggregateTx.cosignatures.length * sizePerCosignature + calculatedCosignatures * sizePerCosignature;
+aggregateTx.fee = new symbolSdk.symbol.Amount(BigInt(calculatedSize * 100)); //手数料
+```
 
 ## 4.7 現場で使えるヒント
 
