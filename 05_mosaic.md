@@ -550,7 +550,13 @@ aggregateTx = facade.transactionFactory.create({
   transactionsHash: merkleHash,
   transactions: embeddedTransactions
 });
-aggregateTx.fee = new symbolSdk.symbol.Amount(BigInt(aggregateTx.size * 100)); //手数料
+
+// 連署により追加される連署情報のサイズを追加して最終的なTxサイズを算出する
+requiredCosignatures = 0; // 必要な連署者の数を指定
+calculatedCosignatures = requiredCosignatures > aggregateTx.cosignatures.length ? requiredCosignatures : aggregateTx.cosignatures.length;
+sizePerCosignature = 8 + 32 + 64;
+calculatedSize = aggregateTx.size - aggregateTx.cosignatures.length * sizePerCosignature + calculatedCosignatures * sizePerCosignature;
+aggregateTx.fee = new symbolSdk.symbol.Amount(BigInt(calculatedSize * 100)); //手数料
 ```
 
 モザイク生成時のブロック高と作成アカウントがモザイク情報に含まれているので同ブロック内のトランザクションを検索することにより、
