@@ -11,6 +11,8 @@ Symbolブロックチェーンにはハッシュロックとシークレット�
 
 ### アグリゲートボンデッドトランザクションの作成
 
+#### v2
+
 ```js
 bob = sym.Account.generateNewAccount(networkType);
 
@@ -52,6 +54,61 @@ aggregateTx = sym.AggregateTransaction.createBonded(
 signedAggregateTx = alice.sign(aggregateTx, generationHash);
 ```
 
+#### v3
+
+```js
+bobKey = new symbolSdk.symbol.KeyPair(symbolSdk.PrivateKey.random());
+bobAddress = facade.network.publicKeyToAddress(bobKey.publicKey);
+
+namespaceIds = symbolSdk.symbol.generateNamespacePath("symbol.xym");
+namespaceId = namespaceIds[namespaceIds.length - 1];
+
+// アグリゲートTxに含めるTxを作成
+tx1 = facade.transactionFactory.createEmbedded({
+  type: 'transfer_transaction_v1',          // Txタイプ:転送Tx
+  signerPublicKey: aliceKey.publicKey,      // Aliceから
+  recipientAddress: bobAddress.toString(),  // Bobへの送信
+  mosaics: [
+    { mosaicId: namespaceId, amount: 1000000n },  // 1XYM送金
+  ],
+  message: new Uint8Array() // メッセージ無し
+});
+
+tx2 = facade.transactionFactory.createEmbedded({
+  type: 'transfer_transaction_v1',            // Txタイプ:転送Tx
+  signerPublicKey: bobKey.publicKey,          // Bobから
+  recipientAddress: aliceAddress.toString(),  // Aliceへの送信
+  message: new Uint8Array([0x00,...(new TextEncoder('utf-8')).encode('thank you!')]) // 平文メッセージ
+});
+
+// マークルハッシュの算出
+embeddedTransactions = [
+  tx1,
+  tx2
+];
+merkleHash = facade.constructor.hashEmbeddedTransactions(embeddedTransactions);
+
+// アグリゲートTx作成
+aggregateTx = facade.transactionFactory.create({
+  type: 'aggregate_bonded_transaction_v2',
+  signerPublicKey: aliceKey.publicKey,  // 署名者公開鍵
+  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+  transactionsHash: merkleHash,
+  transactions: embeddedTransactions
+});
+
+// 連署により追加される連署情報のサイズを追加して最終的なTxサイズを算出する
+requiredCosignatures = 1; // 必要な連署者の数を指定
+calculatedCosignatures = requiredCosignatures > aggregateTx.cosignatures.length ? requiredCosignatures : aggregateTx.cosignatures.length;
+sizePerCosignature = 8 + 32 + 64;
+calculatedSize = aggregateTx.size - aggregateTx.cosignatures.length * sizePerCosignature + calculatedCosignatures * sizePerCosignature;
+aggregateTx.fee = new symbolSdk.symbol.Amount(BigInt(calculatedSize * 100)); //手数料
+
+// 署名
+sig = facade.signTransaction(aliceKey, aggregateTx);
+jsonPayload = facade.transactionFactory.constructor.attachSignature(aggregateTx, sig);
+```
+
 tx1,tx2の2つのトランザクションをaggregateArrayで配列にする時に、送信元アカウントの公開鍵を指定します。
 公開鍵はアカウントの章を参考に事前にAPIで取得しておきましょう。
 配列化されたトランザクションはブロック承認時にその順序で整合性を検証されます。
@@ -59,6 +116,9 @@ tx1,tx2の2つのトランザクションをaggregateArrayで配列にする時�
 また、アグリゲートトランザクションの中に1つでも整合性の合わないトランザクションが存在していると、アグリゲートトランザクション全体がエラーとなってチェーンに承認されることはありません。
 
 ### ハッシュロックトランザクションの作成と署名、アナウンス
+
+#### v2
+
 ```js
 //ハッシュロックTX作成
 hashLockTx = sym.HashLockTransaction.create(
@@ -76,22 +136,121 @@ signedLockTx = alice.sign(hashLockTx, generationHash);
 await txRepo.announce(signedLockTx).toPromise();
 ```
 
+#### v3
+
+```js
+// ハッシュロックTx作成
+hashLockTx = facade.transactionFactory.create({
+  type: 'hash_lock_transaction_v1',     // Txタイプ:ハッシュロックTx
+  signerPublicKey: aliceKey.publicKey,  // 署名者公開鍵
+  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+  mosaic: { mosaicId: namespaceId, amount: 10n * 1000000n },  // 10xym固定値
+  duration: new symbolSdk.symbol.BlockDuration(480n),         // ロック有効期限
+  hash: facade.hashTransaction(aggregateTx)                   // アグリゲートトランザクションのハッシュ値を登録
+});
+hashLockTx.fee = new symbolSdk.symbol.Amount(BigInt(hashLockTx.size * 100)); // 手数料
+
+// 署名
+hashLockSig = facade.signTransaction(aliceKey, hashLockTx);
+hashLockJsonPayload = facade.transactionFactory.constructor.attachSignature(hashLockTx, hashLockSig);
+
+// ハッシュロックTXをアナウンス
+await fetch(
+  new URL('/transactions', NODE),
+  {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: hashLockJsonPayload,
+  }
+)
+.then((res) => res.json())
+.then((json) => {
+  return json;
+});
+```
+
 ### アグリゲートボンデッドトランザクションのアナウンス
 
 エクスプローラーなどで確認した後、ボンデッドトランザクションをネットワークにアナウンスします。
+
+#### v2
+
 ```js
 await txRepo.announceAggregateBonded(signedAggregateTx).toPromise();
 ```
 
+#### v3
+
+```js
+await fetch(
+  new URL('/transactions/partial', NODE), // アグリゲートボンデッドTxはアナウンスする際のURLが違う
+  {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: jsonPayload,
+  }
+)
+.then((res) => res.json())
+.then((json) => {
+  return json;
+});
+```
 
 ### 連署
 ロックされたトランザクションを指定されたアカウント(Bob)で連署します。
+
+#### v2
 
 ```js
 txInfo = await txRepo.getTransaction(signedAggregateTx.hash,sym.TransactionGroup.Partial).toPromise();
 cosignatureTx = sym.CosignatureTransaction.create(txInfo);
 signedCosTx = bob.signCosignatureTransaction(cosignatureTx);
 await txRepo.announceAggregateBondedCosignature(signedCosTx).toPromise();
+```
+
+#### v3
+
+```js
+// アグリゲートボンデッドトランザクションの取得
+txInfo = await fetch(
+  new URL('/transactions/partial/' + facade.hashTransaction(aggregateTx).toString(), NODE),
+  {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' },
+  }
+)
+.then((res) => res.json())
+.then((json) => {
+  return json;
+});
+
+// 連署者の署名
+cosignature = new symbolSdk.symbol.DetachedCosignature();
+signTxHash = new symbolSdk.symbol.Hash256(symbolSdk.utils.hexToUint8(txInfo.meta.hash));
+cosignature.parentHash = signTxHash;
+cosignature.version = 0n;
+cosignature.signerPublicKey = bobKey.publicKey;
+cosignature.signature = new symbolSdk.symbol.Signature(bobKey.sign(signTxHash.bytes).bytes);
+
+// アナウンス
+body= {
+  "parentHash": cosignature.parentHash.toString(),
+  "signature": cosignature.signature.toString(),
+  "signerPublicKey": cosignature.signerPublicKey.toString(),
+  "version": cosignature.version.toString()
+};
+await fetch(
+  new URL('/transactions/cosignature', NODE),
+  {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  }
+)
+.then((res) => res.json())
+.then((json) => {
+  return json;
+});
 ```
 
 ### 注意点
@@ -112,6 +271,8 @@ await txRepo.announceAggregateBondedCosignature(signedCosTx).toPromise();
 まずはAliceとやり取りするBobアカウントを作成します。
 ロック解除にBob側からトランザクションをアナウンスする必要があるのでFAUCETで10XYMほど受信しておきます。
 
+#### v2
+
 ```js
 bob = sym.Account.generateNewAccount(networkType);
 console.log(bob.address);
@@ -120,9 +281,22 @@ console.log(bob.address);
 console.log("https://testnet.symbol.tools/?recipient=" + bob.address.plain() +"&amount=10");
 ```
 
+#### v3
+
+```js
+bobKey = new symbolSdk.symbol.KeyPair(symbolSdk.PrivateKey.random());
+bobAddress = facade.network.publicKeyToAddress(bobKey.publicKey);
+console.log(bobAddress.toString());
+
+//FAUCET URL出力
+console.log("https://testnet.symbol.tools/?recipient=" + bobAddress.toString() +"&amount=10");
+```
+
 ### シークレットロック
 
 ロック・解除にかかわる共通暗号を作成します。
+
+#### v2
 
 ```js
 sha3_256 = require('/node_modules/js-sha3').sha3_256;
@@ -141,7 +315,30 @@ console.log("proof:" + proof);
   proof:7944496ac0f572173c2549baf9ac18f893aab6d0
 ```
 
+#### v3
+
+```js
+sha3_256 = (await import('https://cdn.skypack.dev/@noble/hashes/sha3')).sha3_256;
+
+proof = crypto.getRandomValues(new Uint8Array(20)); // 解除用キーワード
+hash = sha3_256.create();
+hash.update(proof);
+secret = hash.digest();                             // ロック用キーワード  
+console.log("secret:" + symbolSdk.utils.uint8ToHex(secret));
+console.log("proof:" + symbolSdk.utils.uint8ToHex(proof));
+```
+
+###### 出力例
+
+```js
+> secret:D5543DD80B973DCBD0ED792667242DF301E83383367A49B30E926272EA915E24
+> proof:065949369A849D5D5B7B8BC2F948508228D67BCD
+```
+
 トランザクションを作成・署名・アナウンスします
+
+#### v2
+
 ```js
 lockTx = sym.SecretLockTransaction.create(
     sym.Deadline.create(epochAdjustment),
@@ -160,6 +357,41 @@ signedLockTx = alice.sign(lockTx,generationHash);
 await txRepo.announce(signedLockTx).toPromise();
 ```
 
+#### v3
+
+```js
+// シークレットロックTx作成
+lockTx = facade.transactionFactory.create({
+  type: 'secret_lock_transaction_v1',   // Txタイプ:シークレットロックTx
+  signerPublicKey: aliceKey.publicKey,  // 署名者公開鍵
+  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+  mosaic: { mosaicId: namespaceId, amount: 1000000n },        // ロックするモザイク
+  duration: new symbolSdk.symbol.BlockDuration(480n),         // ロック期間(ブロック数)
+  hashAlgorithm: symbolSdk.symbol.LockHashAlgorithm.SHA3_256, // ロックキーワード生成に使用したアルゴリズム
+  secret: secret,                                             // ロック用キーワード
+  recipientAddress: bobAddress,                               // 解除時の転送先:Bob
+});
+lockTx.fee = new symbolSdk.symbol.Amount(BigInt(lockTx.size * 100)); // 手数料
+
+// 署名
+sig = facade.signTransaction(aliceKey, lockTx);
+jsonPayload = facade.transactionFactory.constructor.attachSignature(lockTx, sig);
+
+// シークレットロックTXをアナウンス
+await fetch(
+  new URL('/transactions', NODE),
+  {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: jsonPayload,
+  }
+)
+.then((res) => res.json())
+.then((json) => {
+  return json;
+});
+```
+
 LockHashAlgorithmは以下の通りです。
 ```js
 {0: 'Op_Sha3_256', 1: 'Op_Hash_160', 2: 'Op_Hash_256'}
@@ -169,6 +401,9 @@ LockHashAlgorithmは以下の通りです。
 ロック期間は最長で365日(ブロック数を日換算)までです。
 
 承認されたトランザクションを確認します。
+
+#### v2
+
 ```js
 slRepo = repo.createSecretLockRepository();
 res = await slRepo.search({secret:secret}).toPromise();
@@ -189,6 +424,49 @@ console.log(res.data[0]);
     status: 0
     version: 1
 ```
+
+#### v3
+
+```js
+params = new URLSearchParams({
+  "secret": symbolSdk.utils.uint8ToHex(secret),
+});
+result = await fetch(
+  new URL('/lock/secret?' + params.toString(), NODE),
+  {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' },
+  }
+)
+.then((res) => res.json())
+.then((json) => {
+  return json;
+});
+
+txes = result.data;
+txes.forEach(tx => {
+  console.log(tx);
+});
+```
+
+###### 出力例
+
+```js
+> {lock: {…}, id: '64BBC4CD6FFE587B6D3F7D80'}
+    id: "64BBC4CD6FFE587B6D3F7D80"
+    lock: 
+      amount: "1000000"
+      compositeHash: "905CDD9755A0B30E1AFE4395482DB0673E3FE9CEA3445861BE56B044A9CF212D"
+      endHeight: "657898"
+      hashAlgorithm: 0
+      mosaicId: "72C0212E67A08BCE"
+      ownerAddress: "982B2AA2295B5C23528ADDEE7F29F6521944E9F2340428AB"
+      recipientAddress: "98A8D76FEF8382274D472EE377F2FF3393E5B62C08B4329D"
+      secret: "079FEC44B889EF6E96A4B614930B1271B7BB8EE9412596C4BECB199DE6A7D30E"
+      status: 0
+      version: 1
+```
+
 ロックしたAliceがownerAddress、受信予定のBobがrecipientAddressに記録されています。
 secret情報が公開されていて、これに対応するproofをBobがネットワークに通知します。
 
@@ -197,6 +475,8 @@ secret情報が公開されていて、これに対応するproofをBobがネッ
 
 解除用キーワードを使用してロック解除します。
 Bobは事前に解除用キーワードを入手しておく必要があります。
+
+#### v2
 
 ```js
 proofTx = sym.SecretProofTransaction.create(
@@ -212,7 +492,44 @@ signedProofTx = bob.sign(proofTx,generationHash);
 await txRepo.announce(signedProofTx).toPromise();
 ```
 
+#### v3
+
+```js
+// シークレットプルーフTx作成
+proofTx = facade.transactionFactory.create({
+  type: 'secret_proof_transaction_v1',  // Txタイプ:シークレットプルーフTx
+  signerPublicKey: bobKey.publicKey,    // 署名者公開鍵
+  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+  hashAlgorithm: symbolSdk.symbol.LockHashAlgorithm.SHA3_256, // ロックキーワード生成に使用したアルゴリズム
+  secret: secret,                                             // ロックキーワード
+  recipientAddress: bobAddress,                               // 解除アカウント（受信アカウント）
+  proof: proof,                                               // 解除用キーワード
+});
+proofTx.fee = new symbolSdk.symbol.Amount(BigInt(proofTx.size * 100)); // 手数料
+
+// 署名
+sig = facade.signTransaction(bobKey, proofTx);
+jsonPayload = facade.transactionFactory.constructor.attachSignature(proofTx, sig);
+
+// シークレットロックTXをアナウンス
+await fetch(
+  new URL('/transactions', NODE),
+  {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: jsonPayload,
+  }
+)
+.then((res) => res.json())
+.then((json) => {
+  return json;
+});
+```
+
 承認結果を確認します。
+
+#### v2
+
 ```js
 txInfo = await txRepo.getTransaction(signedProofTx.hash,sym.TransactionGroup.Confirmed).toPromise();
 console.log(txInfo);
@@ -238,15 +555,62 @@ console.log(txInfo);
     type: 16978
 ```
 
+#### v3
+
+```js
+// 承認確認
+txInfo = await fetch(
+  new URL('/transactions/confirmed/' + facade.hashTransaction(proofTx).toString(), NODE),
+  {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' },
+  }
+)
+.then((res) => res.json())
+.then((json) => {
+  return json;
+});
+console.log(txInfo);
+```
+
+###### 出力例
+
+```js
+> {meta: {…}, transaction: {…}, id: '64BBC85E2F7CE156B010F80E'}
+    id: "64BBC85E2F7CE156B010F80E"
+  > meta: 
+      feeMultiplier: 100
+      hash: "68526EBA094A8F4D8FB6118C04FDB44CCA321F278AF93D54203FFBDB7672C255"
+      height: "657450"
+      index: 0
+      merkleComponentHash: "68526EBA094A8F4D8FB6118C04FDB44CCA321F278AF93D54203FFBDB7672C255"
+      timestamp: "22777659619"
+  > transaction: 
+      deadline: "22784827324"
+      hashAlgorithm: 0
+      maxFee: "20700"
+      network: 152
+      proof: "11E7035AC7269DAF9551078987CCEF359BB851BA"
+      recipientAddress: "98A8D76FEF8382274D472EE377F2FF3393E5B62C08B4329D"
+      secret: "079FEC44B889EF6E96A4B614930B1271B7BB8EE9412596C4BECB199DE6A7D30E"
+      signature: "5EBF2281D4557ED8ECF6B3A63AE5284E42BDD379AE671CEA7A5F4A758C74FB2AA3101F80654FD98DE301100A09E9B524C49C1E00998CAA0817F95029A5372A0C"
+      signerPublicKey: "662CEDF69962B1E0F1BF0C43A510DFB12190128B90F7FE9BA48B1249E8E10DBE"
+      size: 207
+      type: 16978
+      version: 1
+```
+
 SecretProofTransactionにはモザイクの受信量の情報は含まれていません。
 ブロック生成時に作成されるレシートで受信量を確認します。
 レシートタイプ:LockSecret_Completed でBob宛のレシートを検索してみます。
+
+#### v2
 
 ```js
 receiptRepo = repo.createReceiptRepository();
 
 receiptInfo = await receiptRepo.searchReceipts({
-    receiptType:sym.LockSecret_Completed,
+    receiptTypes:[sym.ReceiptType.LockSecret_Completed],
     targetAddress:bob.address
 }).toPromise();
 console.log(receiptInfo.data);
@@ -263,6 +627,50 @@ console.log(receiptInfo.data);
                   id: Id {lower: 760461000, higher: 981735131}
               targetAddress: Address {address: 'TBTWKXCNROT65CJHEBPL7F6DRHX7UKSUPD7EUGA', networkType: 152}
               type: 8786
+```
+
+#### v3
+
+```js
+params = new URLSearchParams({
+  "receiptType": symbolSdk.symbol.ReceiptType.LOCK_SECRET_COMPLETED.value,
+  "targetAddress": bob.address.toString(),
+});
+result = await fetch(
+  new URL('/statements/transaction?' + params.toString(), NODE),
+  {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' },
+  }
+)
+.then((res) => res.json())
+.then((json) => {
+  return json;
+});
+console.log(result.data);
+```
+
+###### 出力例
+
+```js
+> (1) [{…}]
+  > 0: 
+      id: "64BBC7952F7CE156B010F7FD"
+    > meta: 
+        timestamp: "22777457773"
+    > statement: 
+        height: "657444"
+      > receipts: Array(1)
+        > 0: 
+            amount: "1000000"
+            mosaicId: "72C0212E67A08BCE"
+            targetAddress: "98A8D76FEF8382274D472EE377F2FF3393E5B62C08B4329D"
+            type: 8786
+            version: 1
+          length: 1
+      > source: 
+          primaryId: 1
+          secondaryId: 0
 ```
 
 ReceiptTypeは以下の通りです。
