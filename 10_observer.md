@@ -5,6 +5,8 @@ SymbolのノードはWebSocket通信でブロックチェーンの状態変化�
 
 WebSocketを生成してリスナーの設定を行います。
 
+#### v2
+
 ```js
 nsRepo = repo.createNamespaceRepository();
 wsEndpoint = NODE.replace('http', 'ws') + "/ws";
@@ -17,9 +19,77 @@ listener.open();
 
 何も通信が無ければ、listenerは1分で切断されます。
 
+#### v3
+
+v2 におけるリスナーは rxjs に依存した機能であるため、 v3 ではリスナーの機能はありません。
+したがって、実装者がWebSocketクライアントをプログラミングする必要があります。
+本章では、 v2 の実装を参考にした一例を示します。
+
+```js
+// チャンネル名
+ListenerChannelName = {
+  block: 'block',
+  confirmedAdded: 'confirmedAdded',
+  unconfirmedAdded: 'unconfirmedAdded',
+  unconfirmedRemoved: 'unconfirmedRemoved',
+  partialAdded: 'partialAdded',
+  partialRemoved: 'partialRemoved',
+  cosignature: 'cosignature',
+  modifyMultisigAccount: 'modifyMultisigAccount',
+  status: 'status',
+  finalizedBlock: 'finalizedBlock',
+}
+
+// 各種設定
+wsEndpoint = NODE.replace('http', 'ws') + "/ws";  // WebSocketエンドポイント設定
+uid = "";
+funcs = {};
+
+// WebSocket初期化
+listener = new WebSocket(wsEndpoint);
+// メッセージ受信時処理
+listener.onmessage = function(e) {
+  // 受信データをJSON変換
+  data = JSON.parse(e.data);
+
+  // WebSocket初期化後、ノードから uid を渡されるため保持しておく
+  if (data.uid != undefined) {
+    uid = data.uid;
+    return;
+  }
+
+  // subscribe しているチャンネルであればコールバックを実行する
+  if (funcs.hasOwnProperty(data.topic)) {
+    funcs[data.topic].forEach(f => {
+      f(data.data);
+    });
+  }
+};
+// エラー時処理
+listener.onerror = function(error) {
+  console.error(error.data);
+};
+// クローズ時処理
+listener.onclose = function(closeEvent) {
+  uid = "";
+  funcs = {};
+  console.log(closeEvent);
+};
+
+// チャンネルへのコールバック追加
+addCallback = (channel, callback) => {
+  if (!funcs.hasOwnProperty(data.topic)) {
+    funcs[channel] = [];
+  }
+  funcs[channel].push(callback);
+};
+```
+
 ## 10.2 受信検知
 
 アカウントが受信したトランザクションを検知します。
+
+#### v2
 
 ```js
 listener.open().then(() => {
@@ -64,6 +134,54 @@ listener.open().then(() => {
     version: 1
 ```
 
+#### v3
+
+```js
+// 承認トランザクション検知時の処理
+channelName = ListenerChannelName.confirmedAdded + "/" + aliceAddress.toString();
+addCallback(channelName, (tx) => {
+  console.log(tx);
+});
+// 承認トランザクション検知設定
+listener.send(JSON.stringify({
+  uid: uid,
+  subscribe: channelName,
+}));
+
+// 未承認トランザクション検知時の処理
+channelName = ListenerChannelName.unconfirmedAdded + "/" + aliceAddress.toString();
+addCallback(channelName, (tx) => {
+  console.log(tx);
+});
+// 未承認トランザクション検知設定
+listener.send(JSON.stringify({
+  uid: uid,
+  subscribe: channelName,
+}));
+```
+
+###### 出力例
+
+```js
+> {transaction: {…}, meta: {…}}
+  > meta: 
+      hash: "A95F2E59D22EDA24D1E82515D452F106B93D7C869B601CCA63A46D0EB2CFB182"
+      height: "0"
+      merkleComponentHash: "A95F2E59D22EDA24D1E82515D452F106B93D7C869B601CCA63A46D0EB2CFB182"
+  > transaction: 
+      deadline: "22961573427"
+      maxFee: "25168"
+    > mosaics: Array(1)
+        0: {id: '72C0212E67A08BCE', amount: '1000000'}
+        length: 1
+      network: 152
+      recipientAddress: "98223AF34A98119217DC2427C6DE7F577A33D8242A2F54C3"
+      signature: "926C1474D285D9C3022ED250A0E3B43096BF94D70036D8FB68CEED56A05B5DFFD75250FE57B1390A4BAFBE9517126F6E109AF156CB5B1E9FC23F433E6FC11E0F"
+      signerPublicKey: "69A31A837EB7DE323F08CA52495A57BA0A95B52D1BB54CEA9A94C12A87B1CADB"
+      type: 16724
+      version: 1
+```
+
 未承認トランザクションは transactionInfo.height=0　で受信します。
 
 ##### 注意事項
@@ -75,6 +193,8 @@ listener.open().then(() => {
 ## 10.3 ブロック監視
 
 新規に生成されたブロックを検知します。
+
+#### v2
 
 ```js
 listener.open().then(() => {
@@ -113,9 +233,52 @@ listener.newBlock()をしておくと、約30秒ごとに通信が発生する�
 まれに、ブロック生成が1分を超える場合があるのでその場合はリスナーを再接続する必要があります。
 （その他の事象で切断される可能性もあるので、万全を期したい場合は後述するoncloseで補足しましょう）
 
+#### v3
+
+```js
+// ブロック生成検知時の処理
+addCallback(ListenerChannelName.block, (block) => {
+  console.log(block);
+});
+// ブロック生成検知設定
+listener.send(JSON.stringify({
+  uid: uid,
+  subscribe: ListenerChannelName.block,
+}));
+```
+
+###### 出力例
+
+```js
+> {block: {…}, meta: {…}}
+  > block: 
+      beneficiaryAddress: "98BE9AC4CD3E833736762A12A63065FF42E476744E6FC597"
+      difficulty: "11527429947328"
+      feeMultiplier: 0
+      height: "663306"
+      network: 152
+      previousBlockHash: "511D2E9940130E3F58875D9FAF0ACABAEA85094B2CF2BE4FE8785B81294BEC5D"
+      proofGamma: "A6FE7FE258D37448C33357EFE2A66E93895FAA38C8AF219CA7DECE6186D44754"
+      proofScalar: "BC71B55808169D3A245CC1818C47B5ECDAB29ED02BF98916144CA52BDC06C403"
+      proofVerificationHash: "C027383E6ED8937242FCE3CC439B52D4"
+      receiptsHash: "69CB5A2E56E51812065187CC61AEAB6B5E413CFB34B0CBB9ADBDB588986A1624"
+      signature: "21C31EF3019A4D888A34FE1EE3864B66FBA818EFB53CA72CEB50001393527D766FD2897C428867C3421F472FA9546B57E6856076FD522AF3CE9D3CD618C2170E"
+      signerPublicKey: "87EEE5E3D69BAA60C093FC2080BA5D36E623C5C0BCDC529B8712A9B6212420D7"
+      stateHash: "DF47AA56BBB3D74088342A9DFFB6DB164F5699BB9D607789B7016A55DE5D15C9"
+      timestamp: "22953836986"
+      transactionsHash: "0000000000000000000000000000000000000000000000000000000000000000"
+      type: 33091
+      version: 1
+  > meta: 
+      generationHash: "B76DE01D89CC6672F30AC183BCEA601DE019AD7D37C84CAE723814A59AED253F"
+      hash: "88277C8A9B45D075BF554DA5DAA24667DAE844DE1C583DFB4A5891822BE9A0DB"
+```
+
 ## 10.4 署名要求
 
 署名が必要なトランザクションが発生すると検知します。
+
+#### v2
 
 ```js
 listener.open().then(() => {
@@ -146,6 +309,52 @@ listener.open().then(() => {
     type: 16961
     version: 1
 
+```
+
+#### v3
+
+```js
+// 署名が必要なアグリゲートボンデッドトランザクション発生検知時の処理
+channelName = ListenerChannelName.partialAdded + "/" + aliceAddress.toString();
+addCallback(channelName, (tx) => {
+  console.log(tx);
+});
+// 署名が必要なアグリゲートボンデッドトランザクション発生検知設定
+listener.send(JSON.stringify({
+  uid: uid,
+  subscribe: channelName,
+}));
+```
+
+###### 出力例
+
+```js
+> {transaction: {…}, meta: {…}}
+  > meta: 
+    hash: "D7DD269A6D6EDC6A1F95045609BBF645B5FD908ED540C312489261C2913955DB"
+    height: "0"
+    merkleComponentHash: "0000000000000000000000000000000000000000000000000000000000000000"
+  > transaction: 
+      deadline: "23127942600"
+      maxFee: "47200"
+      network: 152
+      signature: "05FBC99BA33EA0DA79AB04D555645552DDDC66ABCFDF0FBAEEC0E84531F3CF52E3D8B76F45692B009421185C79993B3B41574E4B149D2931D08632318B7C610E"
+      signerPublicKey: "69A31A837EB7DE323F08CA52495A57BA0A95B52D1BB54CEA9A94C12A87B1CADB"
+    > transactions: Array(1)
+      > 0: 
+        > transaction: 
+          > mosaics: Array(1)
+              0: {id: '72C0212E67A08BCE', amount: '1000000'}
+              length: 1
+            network: 152
+            recipientAddress: "98223AF34A98119217DC2427C6DE7F577A33D8242A2F54C3"
+            signerPublicKey: "99687A9A5C5DA3EC97D0568781FE5AB5C4BB9D18F4BA9343AE5BBD1D2C0CA788"
+            type: 16724
+            version: 1
+        length: 1
+      transactionsHash: "5B59E92F56E78AB14E751177413807CEA7A4C8426F1A756DA43B74EEE1F32679"
+      type: 16961
+      version: 2
 ```
 
 指定アドレスが関係するすべてのアグリゲートトランザクションが検知されます。
