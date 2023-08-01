@@ -10,6 +10,9 @@
 トランザクションがブロックヘッダーに含まれていることを検証します。この検証が成功すれば、トランザクションがブロックチェーンの合意によって承認されたものとみなすことができます。
 
 本章のサンプルスクリプトを実行する前に以下を実行して必要ライブラリを読み込んでおいてください。
+
+#### v2
+
 ```js
 Buffer = require("/node_modules/buffer").Buffer;
 cat = require("/node_modules/catbuffer-typescript");
@@ -20,19 +23,27 @@ blockRepo = repo.createBlockRepository();
 stateProofService = new sym.StateProofService(repo);
 ```
 
+#### v3
+
+```js
+sha3_256 = (await import('https://cdn.skypack.dev/@noble/hashes/sha3')).sha3_256;
+```
+
 ### 検証するペイロード
 
 今回検証するトランザクションペイロードとそのトランザクションが記録されているとされるブロック高です。
 
 ```js
-payload = 'C00200000000000093B0B985101C1BDD1BC2BF30D72F35E34265B3F381ECA464733E147A4F0A6B9353547E2E08189EF37E50D271BEB5F09B81CE5816BB34A153D2268520AF630A0A0E5C72B0D5946C1EFEE7E5317C5985F106B739BB0BC07E4F9A288417B3CD6D26000000000198414140770200000000002A769FB40000000076B455CFAE2CCDA9C282BF8556D3E9C9C0DE18B0CBE6660ACCF86EB54AC51B33B001000000000000DB000000000000000E5C72B0D5946C1EFEE7E5317C5985F106B739BB0BC07E4F9A288417B3CD6D26000000000198544198205C1A4CE06C45B3A896B1B2360E03633B9F36BF7F22338B000000000000000066653465353435393833444430383935303645394533424446434235313637433046394232384135344536463032413837364535303734423641303337414643414233303344383841303630353343353345354235413835323835443639434132364235343233343032364244444331443133343139464435353438323930334242453038423832304100000000006800000000000000B2D4FD84B2B63A96AA37C35FC6E0A2341CEC1FD19C8FFC8D93CCCA2B028D1E9D000000000198444198205C1A4CE06C45B3A896B1B2360E03633B9F36BF7F2233BC089179EBBE01A81400140035383435344434373631364336433635373237396800000000000000B2D4FD84B2B63A96AA37C35FC6E0A2341CEC1FD19C8FFC8D93CCCA2B028D1E9D000000000198444198205C1A4CE06C45B3A896B1B2360E03633B9F36BF7F223345ECB996EDDB9BEB1400140035383435344434373631364336433635373237390000000000000000B2D4FD84B2B63A96AA37C35FC6E0A2341CEC1FD19C8FFC8D93CCCA2B028D1E9D5A71EBA9C924EFA146897BE6C9BB3DACEFA26A07D687AC4A83C9B03087640E2D1DDAE952E9DDBC33312E2C8D021B4CC0435852C0756B1EBD983FCE221A981D02';
-height = 59639;
+payload = '2802000000000000A5151FD55D82351DD488DB5563DD328DA72B2AD25B513C1D0F7F78AFF4D35BA094ABF505C74E6D6BE1FA19F3E5AC60A85E1A4EDC4AC07DECC0E56C59D5D24F0B69A31A837EB7DE323F08CA52495A57BA0A95B52D1BB54CEA9A94C12A87B1CADB0000000002984141A0D70000000000000EEAD6810500000062E78B6170628861B4FC4FCA75210352ACDBD2378AC0A447A3DCF63F969366BB1801000000000000540000000000000069A31A837EB7DE323F08CA52495A57BA0A95B52D1BB54CEA9A94C12A87B1CADB000000000198544198A8D76FEF8382274D472EE377F2FF3393E5B62C08B4329D04000000000000000074783100000000590000000000000069A31A837EB7DE323F08CA52495A57BA0A95B52D1BB54CEA9A94C12A87B1CADB000000000198444198A8D76FEF8382274D472EE377F2FF3393E5B62C08B4329D6668A0DE72812AAE05000500746573743100000000000000590000000000000069A31A837EB7DE323F08CA52495A57BA0A95B52D1BB54CEA9A94C12A87B1CADB000000000198444198A8D76FEF8382274D472EE377F2FF3393E5B62C08B4329DBF85DADBFD54C48D050005007465737432000000000000000000000000000000662CEDF69962B1E0F1BF0C43A510DFB12190128B90F7FE9BA48B1249E8E10DBEEDD3B8A0555B4237505E3E0822B74BCBED8AA3663022413AFDA265BE1C55431ACAE3EA975AF6FD61DEFFA6A16CBA5174A16EF5553AE669D5803A0FA9D1424600';
+height = 686312;
 ```
 
 
 ### payload確認
 
 トランザクションの内容を確認します。
+
+#### v2
 
 ```js
 tx = sym.TransactionMapping.createFromPayload(payload);
@@ -42,27 +53,59 @@ console.log(tx);
 ```
 ###### 出力例
 ```js
-> 257E2CAECF4B477235CA93C37090E8BE58B7D3812A012E39B7B55BA7D7FFCB20
+> 4A1C88BBFE6EB46111C2B02F7C7355DAE186E54132197C2CD6D51297846A1824
 > AggregateTransaction
     > cosignatures: Array(1)
       0: AggregateTransactionCosignature
-        signature: "5A71EBA9C924EFA146897BE6C9BB3DACEFA26A07D687AC4A83C9B03087640E2D1DDAE952E9DDBC33312E2C8D021B4CC0435852C0756B1EBD983FCE221A981D02"
+        signature: "EDD3B8A0555B4237505E3E0822B74BCBED8AA3663022413AFDA265BE1C55431ACAE3EA975AF6FD61DEFFA6A16CBA5174A16EF5553AE669D5803A0FA9D1424600"
         signer: PublicAccount
-          address: Address {address: 'TAQFYGSM4BWELM5IS2Y3ENQOANRTXHZWX57SEMY', networkType: 152}
-          publicKey: "B2D4FD84B2B63A96AA37C35FC6E0A2341CEC1FD19C8FFC8D93CCCA2B028D1E9D"
-      deadline: Deadline {adjustedValue: 3030349354}
+          address: Address {address: "TCUNO37PQOBCOTKHF3RXP4X7GOJ6LNRMBC2DFHI", networkType: 152}
+          publicKey: "662CEDF69962B1E0F1BF0C43A510DFB12190128B90F7FE9BA48B1249E8E10DBE"
+      deadline: Deadline {adjustedValue: 23653181966}
     > innerTransactions: Array(3)
         0: TransferTransaction {type: 16724, networkType: 152, version: 1, deadline: Deadline, maxFee: UInt64, …}
         1: AccountMetadataTransaction {type: 16708, networkType: 152, version: 1, deadline: Deadline, maxFee: UInt64, …}
         2: AccountMetadataTransaction {type: 16708, networkType: 152, version: 1, deadline: Deadline, maxFee: UInt64, …}
-      maxFee: UInt64 {lower: 161600, higher: 0}
+      maxFee: UInt64 {lower: 55200, higher: 0}
       networkType: 152
-      signature: "93B0B985101C1BDD1BC2BF30D72F35E34265B3F381ECA464733E147A4F0A6B9353547E2E08189EF37E50D271BEB5F09B81CE5816BB34A153D2268520AF630A0A"
+      signature: "A5151FD55D82351DD488DB5563DD328DA72B2AD25B513C1D0F7F78AFF4D35BA094ABF505C74E6D6BE1FA19F3E5AC60A85E1A4EDC4AC07DECC0E56C59D5D24F0B"
     > signer: PublicAccount
-        address: Address {address: 'TBIL6D6RURP45YQRWV6Q7YVWIIPLQGLZQFHWFEQ', networkType: 152}
-        publicKey: "0E5C72B0D5946C1EFEE7E5317C5985F106B739BB0BC07E4F9A288417B3CD6D26"
+        address: Address {address: 'TAVSVIRJLNOCGUUK3XXH6KPWKIMUJ2PSGQCCRKY', networkType: 152}
+        publicKey: "69A31A837EB7DE323F08CA52495A57BA0A95B52D1BB54CEA9A94C12A87B1CADB"
       transactionInfo: undefined
       type: 16705
+      version: 2
+```
+
+#### v3
+
+```js
+tx = symbolSdk.symbol.TransactionFactory.deserialize(symbolSdk.utils.hexToUint8(payload));
+hash = facade.hashTransaction(tx);
+console.log(hash);
+console.log(tx);
+```
+###### 出力例
+```js
+> Hash256 {bytes: Uint8Array(32)}
+> AggregateCompleteTransactionV2
+  > cosignatures: Array(1)
+    > 0: Cosignature
+        signature: Signature {bytes: Uint8Array(64)}
+        signerPublicKey: PublicKey {bytes: Uint8Array(32)}
+    deadline: Timestamp {size: 8, isSigned: false, value: 23653181966n}
+    fee: Amount {size: 8, isSigned: false, value: 55200n}
+    network: NetworkType {value: 152}
+    signature: Signature {bytes: Uint8Array(64)}
+    signerPublicKey: PublicKey {bytes: Uint8Array(32)}
+    size: 552
+  > transactions: Array(3)
+      0: EmbeddedTransferTransactionV1 {_signerPublicKey: PublicKey, _version: 1, _network: NetworkType, _type: TransactionType, _recipientAddress: UnresolvedAddress, …}
+      1: EmbeddedAccountMetadataTransactionV1 {_signerPublicKey: PublicKey, _version: 1, _network: NetworkType, _type: TransactionType, _targetAddress: UnresolvedAddress, …}
+      2: EmbeddedAccountMetadataTransactionV1 {_signerPublicKey: PublicKey, _version: 1, _network: NetworkType, _type: TransactionType, _targetAddress: UnresolvedAddress, …}
+    transactionsHash: Hash256 {bytes: Uint8Array(32)}
+    type: TransactionType {value: 16705}
+    version: 2
 ```
 
 ### 署名者の検証
@@ -70,10 +113,12 @@ console.log(tx);
 トランザクションがブロックに含まれていることが確認できれば自明ですが、  
 念のため、アカウントの公開鍵でトランザクションの署名を検証しておきます。
 
+#### v2
+
 ```js
 res = alice.publicAccount.verifySignature(
     tx.getSigningBytes([...Buffer.from(payload,'hex')],[...Buffer.from(generationHash,'hex')]),
-    "93B0B985101C1BDD1BC2BF30D72F35E34265B3F381ECA464733E147A4F0A6B9353547E2E08189EF37E50D271BEB5F09B81CE5816BB34A153D2268520AF630A0A"
+    "A5151FD55D82351DD488DB5563DD328DA72B2AD25B513C1D0F7F78AFF4D35BA094ABF505C74E6D6BE1FA19F3E5AC60A85E1A4EDC4AC07DECC0E56C59D5D24F0B"
 );
 console.log(res);
 ```
@@ -84,11 +129,24 @@ console.log(res);
 getSigningBytesで署名の対象となる部分だけを取り出しています。  
 通常のトランザクションとアグリゲートトランザクションでは取り出す部分が異なるので注意が必要です。  
 
+#### v3
+```js
+res = facade.verifyTransaction(tx, tx.signature);
+console.log(res);
+```
+```js
+> true
+```
+
+v3 でも `verifyTransaction()` で署名の対象となる部分だけを取り出しています。  
+
 ### マークルコンポーネントハッシュの計算
 
 トランザクションのハッシュ値には連署者の情報が含まれていません。  
 一方でブロックヘッダーに格納されるマークルルートはトランザクションのハッシュに連署者の情報が含めたものが格納されます。  
 そのためトランザクションがブロック内部に存在しているかどうかを検証する場合は、トランザクションハッシュをマークルコンポーネントハッシュに変換しておく必要があります。
+
+#### v2
 
 ```js
 merkleComponentHash = hash;
@@ -103,13 +161,33 @@ if( tx.cosignatures !== undefined && tx.cosignatures.length > 0){
 }
 console.log(merkleComponentHash);
 ```
+
+#### v3
+
 ```js
-> C8D1335F07DE05832B702CACB85B8EDAC2F3086543C76C9F56F99A0861E8F235
+merkleComponentHash = hash;
+if (tx.cosignatures !== undefined && tx.cosignatures.length > 0) {
+  hasher = sha3_256.create();
+  hasher.update(hash.bytes);
+  for (cosignature of tx.cosignatures){
+    hasher.update(cosignature.signerPublicKey.bytes);
+  }
+  merkleComponentHash = symbolSdk.utils.uint8ToHex(hasher.digest());
+}
+console.log(merkleComponentHash);
+```
+
+###### 出力例
+
+```js
+> C61D17F89F5DEBC74A98A1321DB71EB7DC9111CDF1CF3C07C0E9A91FFE305AC3
 ```
 
 ### InBlockの検証
 
 ノードからマークルツリーを取得し、先ほど計算したmerkleComponentHashからブロックヘッダーのマークルルートが導出できることを確認します。
+
+#### v2
 
 ```js
 function validateTransactionInBlock(leaf,HRoot,merkleProof){
@@ -140,6 +218,48 @@ merkleProof = (await blockRepo.getMerkleTransaction(height, leaf).toPromise()).m
 result = validateTransactionInBlock(leaf,HRoot,merkleProof);
 console.log(result);
 ```
+
+#### v3
+
+```js
+//トランザクションから計算
+leaf = new symbolSdk.Hash256(merkleComponentHash);
+
+//ノードから取得
+HRoot = await fetch(
+  new URL('/blocks/' + height, NODE),
+  {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' },
+  }
+)
+.then((res) => res.json())
+.then((json) => {
+  return new symbolSdk.Hash256(json.block.transactionsHash);
+});
+merkleProof = await fetch(
+  new URL('/blocks/' + height + '/transactions/' + leaf + '/merkle', NODE),
+  {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' },
+  }
+)
+.then((res) => res.json())
+.then((json) => {
+  let paths = [];
+  json.merklePath.forEach(path => paths.push({
+    "hash": new symbolSdk.Hash256(path.hash),
+    "isLeft": path.position === "left"
+  }));
+  return paths;
+});
+
+result = symbolSdk.symbol.proveMerkle(leaf, merkleProof, HRoot);
+console.log(result);
+```
+
+###### 出力例
+
 ```js
 > true
 ```
@@ -152,6 +272,8 @@ console.log(result);
 
 
 ### normalブロックの検証
+
+#### v2
 
 ```js
 block = await blockRepo.getBlockByHeight(height).toPromise();
@@ -181,6 +303,57 @@ if(block.type ===  sym.BlockType.NormalBlock){
 }
 ```
 
+#### v3
+
+```js
+blockInfo = await fetch(
+  new URL('/blocks/' + height, NODE),
+  {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' },
+  }
+)
+.then((res) => res.json())
+.then((json) => {
+  return json;
+});
+block = blockInfo.block;
+previousBlockHash = await fetch(
+  new URL('/blocks/' + (height - 1), NODE),
+  {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' },
+  }
+)
+.then((res) => res.json())
+.then((json) => {
+  return json.meta.hash;
+});
+
+if(block.type === symbolSdk.symbol.BlockType.NORMAL.value){
+  hasher = sha3_256.create();
+  hasher.update(Buffer.from(block.signature,'hex')); //signature
+  hasher.update(Buffer.from(block.signerPublicKey,'hex')); //publicKey
+  hasher.update(Buffer.from(block.version.toString(16).padStart(1 * 2, '0'),'hex').reverse());
+  hasher.update(Buffer.from(block.network.toString(16).padStart(1 * 2, '0'),'hex').reverse());
+  hasher.update(Buffer.from(block.type.toString(16).padStart(2 * 2, '0'),'hex').reverse());
+  hasher.update(Buffer.from(BigInt(block.height).toString(16).padStart(8 * 2, '0'),'hex').reverse());
+  hasher.update(Buffer.from(BigInt(block.timestamp).toString(16).padStart(8 * 2, '0'),'hex').reverse());
+  hasher.update(Buffer.from(BigInt(block.difficulty).toString(16).padStart(8 * 2, '0'),'hex').reverse());
+  hasher.update(Buffer.from(block.proofGamma,'hex'));
+  hasher.update(Buffer.from(block.proofVerificationHash,'hex'));
+  hasher.update(Buffer.from(block.proofScalar,'hex'));
+  hasher.update(Buffer.from(previousBlockHash,'hex'));
+  hasher.update(Buffer.from(block.transactionsHash,'hex'));
+  hasher.update(Buffer.from(block.receiptsHash,'hex'));
+  hasher.update(Buffer.from(block.stateHash,'hex'));
+  hasher.update(Buffer.from(block.beneficiaryAddress,'hex'));
+  hasher.update(Buffer.from(block.feeMultiplier.toString(16).padStart(4 * 2, '0'),'hex').reverse());
+  hash = symbolSdk.utils.uint8ToHex(hasher.digest());
+  console.log(hash === blockInfo.meta.hash);
+}
+```
+
 true が出力されればこのブロックハッシュは前ブロックハッシュ値の存在を認知していることになります。  
 同様にしてn番目のブロックがn-1番目のブロックを存在を確認し、最後に検証中のブロックにたどり着きます。  
 
@@ -196,6 +369,8 @@ NormalBlockに加えて以下の情報が追加されています。
 - harvestingEligibleAccountsCount
 - totalVotingBalance
 - previousImportanceBlockHash
+
+#### v2
 
 ```js
 block = await blockRepo.getBlockByHeight(height).toPromise();
@@ -230,9 +405,69 @@ if(block.type ===  sym.BlockType.ImportanceBlock){
 }
 ```
 
+#### v3
+
+```js
+// height = Importance Block のブロック高
+blockInfo = await fetch(
+  new URL('/blocks/' + height, NODE),
+  {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' },
+  }
+)
+.then((res) => res.json())
+.then((json) => {
+  return json;
+});
+block = blockInfo.block;
+previousBlockHash = await fetch(
+  new URL('/blocks/' + (height - 1), NODE),
+  {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' },
+  }
+)
+.then((res) => res.json())
+.then((json) => {
+  return json.meta.hash;
+});
+
+if(block.type === symbolSdk.symbol.BlockType.IMPORTANCE.value){
+  hasher = sha3_256.create();
+  hasher.update(Buffer.from(block.signature,'hex')); //signature
+  hasher.update(Buffer.from(block.signerPublicKey,'hex')); //publicKey
+  hasher.update(Buffer.from(block.version.toString(16).padStart(1 * 2, '0'),'hex').reverse());
+  hasher.update(Buffer.from(block.network.toString(16).padStart(1 * 2, '0'),'hex').reverse());
+  hasher.update(Buffer.from(block.type.toString(16).padStart(2 * 2, '0'),'hex').reverse());
+  hasher.update(Buffer.from(BigInt(block.height).toString(16).padStart(8 * 2, '0'),'hex').reverse());
+  hasher.update(Buffer.from(BigInt(block.timestamp).toString(16).padStart(8 * 2, '0'),'hex').reverse());
+  hasher.update(Buffer.from(BigInt(block.difficulty).toString(16).padStart(8 * 2, '0'),'hex').reverse());
+  hasher.update(Buffer.from(block.proofGamma,'hex'));
+  hasher.update(Buffer.from(block.proofVerificationHash,'hex'));
+  hasher.update(Buffer.from(block.proofScalar,'hex'));
+  hasher.update(Buffer.from(previousBlockHash,'hex'));
+  hasher.update(Buffer.from(block.transactionsHash,'hex'));
+  hasher.update(Buffer.from(block.receiptsHash,'hex'));
+  hasher.update(Buffer.from(block.stateHash,'hex'));
+  hasher.update(Buffer.from(block.beneficiaryAddress,'hex'));
+  hasher.update(Buffer.from(block.feeMultiplier.toString(16).padStart(4 * 2, '0'),'hex').reverse());
+  hasher.update(Buffer.from(block.votingEligibleAccountsCount.toString(16).padStart(4 * 2, '0'),'hex').reverse());
+  hasher.update(Buffer.from(BigInt(block.harvestingEligibleAccountsCount).toString(16).padStart(8 * 2, '0'),'hex').reverse());
+  hasher.update(Buffer.from(BigInt(block.totalVotingBalance).toString(16).padStart(8 * 2, '0'),'hex').reverse());
+  hasher.update(Buffer.from(block.previousImportanceBlockHash,'hex')); //signature
+
+  hash = symbolSdk.utils.uint8ToHex(hasher.digest());
+  console.log(hash === blockInfo.meta.hash);
+}
+```
+
 後述するアカウントやメタデータの検証のために、stateHashSubCacheMerkleRootsを検証しておきます。
 
 ### stateHashの検証
+
+#### v2
+
 ```js
 console.log(block);
 ```
@@ -266,6 +501,52 @@ hasher.update(Buffer.from(block.stateHashSubCacheMerkleRoots[8],'hex')); //Metad
 hash = hasher.hex().toUpperCase();
 console.log(block.stateHash === hash);
 ```
+```js
+> true
+```
+
+#### v3
+
+```js
+console.log(blockInfo);
+```
+
+```js
+> {meta: {…}, block: {…}, id: '64C908592F7CE156B01247ED'}
+  > meta: 
+      generationHash: "FEA8C05F666D3738C7D482ACC596A0C525DB9D1F4BDFF52DAA8EE58FB6D493DC"
+      hash: "B075A54EF02CE1E4DDCBD22769903B06B2CED92053CB8D02A542598D0E79BC65"
+    > stateHashSubCacheMerkleRoots: Array(9)
+        0: "EBA99DC4BBF6A6482DA27660FED8BFECE5BCE13007B8A8DBF4C34E0C50A11A73"
+        1: "5C2891A9D9F6B3B0959F0AAA8B95F03EC94028D6A672B5D6A2C5C129D55B876F"
+        2: "C772768B23FCD844465A6A73D414216D25AF0E6F197EA22FD0DDAF8FBBBFCD3B"
+        3: "33A7871B1AE93D32EA881E57788FC60EC2BA1C57E11AAC45E75B20CFFD6DF7CB"
+        4: "0000000000000000000000000000000000000000000000000000000000000000"
+        5: "FD4207BD7EB7A3F89DC69D55F1B10F9962C58851715F7BE5655C90208FA39792"
+        6: "8FBA918CFC7E117219102957780DE13CA9D86E5FAB0FB5CF14E352778E4D6EC1"
+        7: "AB41382FB77EC86B6C4467FD67E1F8DBEEA6DD8A5DD0119B10D61F6FECC63F9C"
+        8: "0B17D3ACE8263539809FDE95874339CEF1D5372134AADCE02D68EC5BB8A7B6EF"
+      statementsCount: 1
+      totalFee: "73500"
+      totalTransactionsCount: 5
+      transactionsCount: 2
+```
+
+```js
+hasher = sha3_256.create();
+hasher.update(Buffer.from(blockInfo.meta.stateHashSubCacheMerkleRoots[0],'hex')); //AccountState
+hasher.update(Buffer.from(blockInfo.meta.stateHashSubCacheMerkleRoots[1],'hex')); //Namespace
+hasher.update(Buffer.from(blockInfo.meta.stateHashSubCacheMerkleRoots[2],'hex')); //Mosaic
+hasher.update(Buffer.from(blockInfo.meta.stateHashSubCacheMerkleRoots[3],'hex')); //Multisig
+hasher.update(Buffer.from(blockInfo.meta.stateHashSubCacheMerkleRoots[4],'hex')); //HashLockInfo
+hasher.update(Buffer.from(blockInfo.meta.stateHashSubCacheMerkleRoots[5],'hex')); //SecretLockInfo
+hasher.update(Buffer.from(blockInfo.meta.stateHashSubCacheMerkleRoots[6],'hex')); //AccountRestriction
+hasher.update(Buffer.from(blockInfo.meta.stateHashSubCacheMerkleRoots[7],'hex')); //MosaicRestriction
+hasher.update(Buffer.from(blockInfo.meta.stateHashSubCacheMerkleRoots[8],'hex')); //Metadata
+hash = symbolSdk.utils.uint8ToHex(hasher.digest());
+console.log(blockInfo.block.stateHash === hash);
+```
+
 ```js
 > true
 ```
