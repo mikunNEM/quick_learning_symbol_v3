@@ -809,6 +809,8 @@ checkState(stateProof,aliceStateHash,alicePathHash,rootHash);
 マークルツリー上の分岐する枝をメタデータキーで構成されるハッシュ値でたどり、
 ルートに到着できるかを確認します。
 
+#### v2
+
 ```js
 srcAddress = Buffer.from(
     sym.Address.createFromRawAddress("TBIL6D6RURP45YQRWV6Q7YVWIIPLQGLZQFHWFEQ").encoded(),
@@ -859,11 +861,83 @@ stateProof = await stateProofService.metadataById(compositeHash).toPromise();
 checkState(stateProof,stateHash,pathHash,rootHash);
 ```
 
+#### v3
+
+```js
+srcAddress = (new symbolSdk.symbol.Address("TBIL6D6RURP45YQRWV6Q7YVWIIPLQGLZQFHWFEQ")).bytes;
+
+targetAddress = (new symbolSdk.symbol.Address("TBIL6D6RURP45YQRWV6Q7YVWIIPLQGLZQFHWFEQ")).bytes;
+
+hasher = sha3_256.create();    
+hasher.update(srcAddress);
+hasher.update(targetAddress);
+hasher.update(symbolSdk.utils.hexToUint8("CF217E116AA422E2").reverse()); // scopeKey
+hasher.update(symbolSdk.utils.hexToUint8("1275B0B7511D9161").reverse()); // targetId
+hasher.update(Uint8Array.from([1])); // type: Mosaic 1
+compositeHash = hasher.digest();
+
+hasher = sha3_256.create();   
+hasher.update(compositeHash);
+
+pathHash = symbolSdk.utils.uint8ToHex(hasher.digest());
+
+//stateHash(Value値)
+hasher = sha3_256.create();
+version = 1;
+hasher.update(Buffer.from(version.toString(16).padStart(2 * 2, '0'),'hex').reverse()); //version
+hasher.update(srcAddress);
+hasher.update(targetAddress);
+hasher.update(symbolSdk.utils.hexToUint8("CF217E116AA422E2").reverse()); // scopeKey
+hasher.update(symbolSdk.utils.hexToUint8("1275B0B7511D9161").reverse()); // targetId
+hasher.update(Uint8Array.from([1])); //mosaic
+
+value = Buffer.from("test");
+
+hasher.update(Buffer.from(value.length.toString(16).padStart(2 * 2, '0'),'hex').reverse());
+hasher.update(value); 
+stateHash = symbolSdk.utils.uint8ToHex(hasher.digest());
+
+//サービス提供者以外のノードから最新のブロックヘッダー情報を取得
+query = new URLSearchParams({
+  "order": "desc"
+});
+blockInfo = await fetch(
+  new URL('/blocks?' + query.toString(), NODE),
+  {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' },
+  }
+)
+.then((res) => res.json())
+.then((json) => {
+  return json;
+});
+rootHash = blockInfo.data[0].meta.stateHashSubCacheMerkleRoots[8];
+
+//サービス提供者を含む任意のノードからマークル情報を取得
+stateProof = await fetch(
+  new URL('/metadata/' + symbolSdk.utils.uint8ToHex(compositeHash) + '/merkle', NODE),
+  {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' },
+  }
+)
+.then((res) => res.json())
+.then((json) => {
+  return json;
+});
+
+//検証
+checkState(stateProof,stateHash,pathHash,rootHash);
+```
+
 ### 13.3.3 アカウントへ登録したメタデータの検証
 
 アカウントに登録したメタデータValue値を葉として、
 マークルツリー上の分岐する枝をメタデータキーで構成されるハッシュ値でたどり、
 ルートに到着できるかを確認します。
+
+#### v2
 
 ```js
 srcAddress = Buffer.from(
@@ -909,6 +983,75 @@ rootHash = blockInfo.data[0].stateHashSubCacheMerkleRoots[8];
 
 //サービス提供者を含む任意のノードからマークル情報を取得
 stateProof = await stateProofService.metadataById(compositeHash).toPromise();
+
+//検証
+checkState(stateProof,stateHash,pathHash,rootHash);
+```
+
+#### v3
+
+```js
+srcAddress = (new symbolSdk.symbol.Address("TBIL6D6RURP45YQRWV6Q7YVWIIPLQGLZQFHWFEQ")).bytes;
+
+targetAddress = (new symbolSdk.symbol.Address("TBIL6D6RURP45YQRWV6Q7YVWIIPLQGLZQFHWFEQ")).bytes;
+
+//compositePathHash(Key値)
+hasher = sha3_256.create();    
+hasher.update(srcAddress);
+hasher.update(targetAddress);
+hasher.update(symbolSdk.utils.hexToUint8("9772B71B058127D7").reverse()); // scopeKey
+hasher.update(symbolSdk.utils.hexToUint8("0000000000000000").reverse()); // targetId
+hasher.update(Uint8Array.from([0])); // type: Account 0
+compositeHash = hasher.digest();
+
+hasher = sha3_256.create();   
+hasher.update( Buffer.from(compositeHash,'hex'));
+
+pathHash = symbolSdk.utils.uint8ToHex(hasher.digest());
+
+//stateHash(Value値)
+hasher = sha3_256.create();
+version = 1;
+hasher.update(Buffer.from(version.toString(16).padStart(2 * 2, '0'),'hex').reverse()); //version
+hasher.update(srcAddress);
+hasher.update(targetAddress);
+hasher.update(symbolSdk.utils.hexToUint8("9772B71B058127D7").reverse()); // scopeKey
+hasher.update(symbolSdk.utils.hexToUint8("0000000000000000").reverse()); // targetId
+hasher.update(Uint8Array.from([0])); //account
+value = Buffer.from("test");
+hasher.update(Buffer.from(value.length.toString(16).padStart(2 * 2, '0'),'hex').reverse());
+hasher.update(value); 
+stateHash = symbolSdk.utils.uint8ToHex(hasher.digest());
+
+//サービス提供者以外のノードから最新のブロックヘッダー情報を取得
+query = new URLSearchParams({
+  "order": "desc"
+});
+blockInfo = await fetch(
+  new URL('/blocks?' + query.toString(), NODE),
+  {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' },
+  }
+)
+.then((res) => res.json())
+.then((json) => {
+  return json;
+});
+rootHash = blockInfo.data[0].meta.stateHashSubCacheMerkleRoots[8];
+
+//サービス提供者を含む任意のノードからマークル情報を取得
+stateProof = await fetch(
+  new URL('/metadata/' + symbolSdk.utils.uint8ToHex(compositeHash) + '/merkle', NODE),
+  {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' },
+  }
+)
+.then((res) => res.json())
+.then((json) => {
+  return json;
+});
 
 //検証
 checkState(stateProof,stateHash,pathHash,rootHash);
