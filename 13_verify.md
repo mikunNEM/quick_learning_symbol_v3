@@ -561,6 +561,8 @@ console.log(blockInfo.block.stateHash === hash);
 
 ### 検証用共通関数
 
+#### v2
+
 ```js
 //葉のハッシュ値取得関数
 function getLeafHash(encodedPath, leafValue){
@@ -608,12 +610,70 @@ function checkState(stateProof,stateHash,pathHash,rootHash){
 }
 ```
 
+#### v3
+
+```js
+//葉のハッシュ値取得関数
+function getLeafHash(encodedPath, leafValue){
+    const hasher = sha3_256.create();
+    return symbolSdk.utils.uint8ToHex(hasher.update(symbolSdk.utils.hexToUint8(encodedPath + leafValue)).digest());
+}
+
+//枝のハッシュ値取得関数
+function getBranchHash(encodedPath, links){
+    const branchLinks = Array(16).fill(symbolSdk.utils.uint8ToHex(new Uint8Array(32)));
+    links.forEach((link) => {
+        branchLinks[parseInt(`0x${link.bit}`, 16)] = link.link;
+    });
+    const hasher = sha3_256.create();
+    const bHash = symbolSdk.utils.uint8ToHex(hasher.update(symbolSdk.utils.hexToUint8(encodedPath + branchLinks.join(''))).digest());
+    return bHash;
+}
+
+//ワールドステートの検証
+function checkState(stateProof,stateHash,pathHash,rootHash){
+  merkleLeaf = undefined;
+  merkleBranches = [];
+  stateProof.tree.forEach(n => {
+    if (n.type === 255) {
+      merkleLeaf = n;
+    } else {
+      merkleBranches.push(n);
+    }
+  });
+  merkleBranches.reverse();
+
+  const leafHash = getLeafHash(merkleLeaf.encodedPath,stateHash);
+
+  let linkHash = leafHash; //最初のlinkHashはleafHash
+  let bit="";
+  for(let i = 0; i < merkleBranches.length; i++){
+      const branch = merkleBranches[i];
+      const branchLink = branch.links.find(x=>x.link === linkHash)
+      linkHash = getBranchHash(branch.encodedPath,branch.links);
+      bit = merkleBranches[i].path.slice(0,merkleBranches[i].nibbleCount) + branchLink.bit + bit ;
+  }
+
+  const treeRootHash = linkHash; //最後のlinkHashはrootHash
+  let treePathHash = bit + merkleLeaf.path;
+
+  if(treePathHash.length % 2 == 1){
+    treePathHash = treePathHash.slice( 0, -1 );
+  }
+ 
+  //検証
+  console.log(treeRootHash === rootHash);
+  console.log(treePathHash === pathHash);
+}
+```
 
 ### 13.3.1 アカウント情報の検証
 
 アカウント情報を葉として、
 マークルツリー上の分岐する枝をアドレスでたどり、
 ルートに到着できるかを確認します。
+
+#### v2
 
 ```js
 stateProofService = new sym.StateProofService(repo);
@@ -640,6 +700,108 @@ stateProof = await stateProofService.accountById(aliceAddress).toPromise();
 checkState(stateProof,aliceStateHash,alicePathHash,rootHash);
 ```
 
+#### v3
+
+```js
+aliceAddress = new symbolSdk.symbol.Address("TBIL6D6RURP45YQRWV6Q7YVWIIPLQGLZQFHWFEQ");
+
+hasher = sha3_256.create();
+alicePathHash = symbolSdk.utils.uint8ToHex(hasher.update(aliceAddress.bytes).digest());
+
+hasher = sha3_256.create();
+aliceInfo = await fetch(
+  new URL('/accounts/' + aliceAddress.toString(), NODE),
+  {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' },
+  }
+)
+.then((res) => res.json())
+.then((json) => {
+  return json.account;
+});
+
+// アカウント情報から StateHash を導出
+// catbuffer-typescript が使える場合はそちらを利用すると楽
+format = (parseInt(aliceInfo.importance) === 0 || aliceInfo.activityBuckets.length < 5 ? 0x00 : 0x01);
+supplementalPublicKeysMask = 0x00;
+linkedPublicKey = new Uint8Array([]);
+if (aliceInfo.supplementalPublicKeys.linked !== undefined) {
+  supplementalPublicKeysMask |= 0x01;
+  linkedPublicKey = symbolSdk.utils.hexToUint8(aliceInfo.supplementalPublicKeys.linked.publicKey);
+}
+nodePublicKey = new Uint8Array([]);
+if (aliceInfo.supplementalPublicKeys.node !== undefined) {
+  supplementalPublicKeysMask |= 0x02;
+  nodePublicKey = symbolSdk.utils.hexToUint8(aliceInfo.supplementalPublicKeys.node.publicKey);
+}
+vrfPublicKey = new Uint8Array([]);
+if (aliceInfo.supplementalPublicKeys.vrf !== undefined) {
+  supplementalPublicKeysMask |= 0x04;
+  vrfPublicKey = symbolSdk.utils.hexToUint8(aliceInfo.supplementalPublicKeys.vrf.publicKey);
+}
+votingPublicKeys = new Uint8Array([]);
+if (aliceInfo.supplementalPublicKeys.voting !== undefined) {
+  aliceInfo.supplementalPublicKeys.voting.publicKeys.forEach(key => {
+    votingPublicKeys = new Uint8Array([...votingPublicKeys, ...symbolSdk.utils.hexToUint8(key.publicKey)]);
+  });
+}
+balances = new Uint8Array([]);
+if (aliceInfo.mosaics.length > 0) {
+  aliceInfo.mosaics.forEach(mosaic => {
+    balances = new Uint8Array([...balances, ...symbolSdk.utils.hexToUint8(mosaic.id).reverse(), ...Buffer.from(BigInt(mosaic.amount).toString(16).padStart(8 * 2, '0'),'hex').reverse()]);
+  });
+}
+accountInfoBytes = new Uint8Array([
+  ...Buffer.from(aliceInfo.version.toString(16).padStart(2 * 2, '0'),'hex').reverse(),
+  ...symbolSdk.utils.hexToUint8(aliceInfo.address),
+  ...Buffer.from(BigInt(aliceInfo.addressHeight).toString(16).padStart(8 * 2, '0'),'hex').reverse(),
+  ...symbolSdk.utils.hexToUint8(aliceInfo.publicKey),
+  ...Buffer.from(BigInt(aliceInfo.publicKeyHeight).toString(16).padStart(8 * 2, '0'),'hex').reverse(),
+  ...Buffer.from(aliceInfo.accountType.toString(16).padStart(1 * 2, '0'),'hex').reverse(),
+  ...Buffer.from(format.toString(16).padStart(1 * 2, '0'),'hex').reverse(),
+  ...Buffer.from(supplementalPublicKeysMask.toString(16).padStart(1 * 2, '0'),'hex').reverse(),
+  ...Buffer.from(votingPublicKeys.length.toString(16).padStart(1 * 2, '0'),'hex').reverse(),
+  ...linkedPublicKey, ...nodePublicKey, ...vrfPublicKey, ...votingPublicKeys,
+  // importanceSnapshots,
+  // activityBuckets
+  ...Buffer.from(aliceInfo.mosaics.length.toString(16).padStart(2 * 2, '0'),'hex').reverse(), ...balances
+]);
+aliceStateHash = symbolSdk.utils.uint8ToHex(hasher.update(accountInfoBytes).digest());
+
+//サービス提供者以外のノードから最新のブロックヘッダー情報を取得
+query = new URLSearchParams({
+  "order": "desc"
+});
+blockInfo = await fetch(
+  new URL('/blocks?' + query.toString(), NODE),
+  {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' },
+  }
+)
+.then((res) => res.json())
+.then((json) => {
+  return json;
+});
+rootHash = blockInfo.data[0].meta.stateHashSubCacheMerkleRoots[0];
+
+//サービス提供者を含む任意のノードからマークル情報を取得
+stateProof = await fetch(
+  new URL('/accounts/' + aliceAddress.toString() + '/merkle', NODE),
+  {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' },
+  }
+)
+.then((res) => res.json())
+.then((json) => {
+  return json;
+});
+
+//検証
+checkState(stateProof,aliceStateHash,alicePathHash,rootHash);
+```
 
 ### 13.3.2 モザイクへ登録したメタデータの検証
 
