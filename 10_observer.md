@@ -45,6 +45,14 @@ wsEndpoint = NODE.replace('http', 'ws') + "/ws";  // WebSocketエンドポイン
 uid = "";
 funcs = {};
 
+// チャンネルへのコールバック追加
+addCallback = (channel, callback) => {
+  if (!funcs.hasOwnProperty(channel)) {
+    funcs[channel] = [];
+  }
+  funcs[channel].push(callback);
+};
+
 // WebSocket初期化
 listener = new WebSocket(wsEndpoint);
 // メッセージ受信時処理
@@ -74,14 +82,6 @@ listener.onclose = function(closeEvent) {
   uid = "";
   funcs = {};
   console.log(closeEvent);
-};
-
-// チャンネルへのコールバック追加
-addCallback = (channel, callback) => {
-  if (!funcs.hasOwnProperty(data.topic)) {
-    funcs[channel] = [];
-  }
-  funcs[channel].push(callback);
 };
 ```
 
@@ -367,6 +367,9 @@ listener.send(JSON.stringify({
 一覧からランダムに選択し、接続を試みます。
 
 ##### ノードへの接続
+
+#### v2, v3
+
 ```js
 //ノード一覧
 NODES = ["https://node.com:3001",...];
@@ -413,7 +416,10 @@ function connectNode(nodes) {
 エンドポイント /node/health　を確認してステータス異常の場合はノードを選びなおします。
 
 
-##### レポジトリの作成
+##### レポジトリの作成, ノードURLの取得
+
+#### v2
+
 ```js
 function createRepo(nodes){
 
@@ -434,8 +440,43 @@ function createRepo(nodes){
 まれに /network/properties のエンドポイントが解放されていないノードが存在するため、
 getEpochAdjustment() の情報を取得してチェックを行います。取得できない場合は再帰的にcreateRepoを読み込みます。
 
+#### v3
+
+v3 ではリポジトリがないため、接続できるノードのURLを返却します。
+
+```js
+function searchUrl(nodes){
+
+  return connectNode(nodes).then(async function onFulfilled(node) {
+
+    try{
+        epochAdjustment = await fetch(
+          new URL('/network/properties', node),
+          {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' },
+          }
+        )
+        .then((res) => res.json())
+        .then((json) => {
+          identifier = json.network.identifier;                   // v3 only
+          facade = new symbolSdk.facade.SymbolFacade(identifier); // v3 only
+          e = json.network.epochAdjustment;
+          return Number(e.substring(0, e.length - 1));
+        });
+    }catch(error){
+      console.error("fail searchUrl", error);
+      return await searchUrl(nodes);
+    }
+    return node;
+  });
+}
+```
 
 ##### リスナーの常時接続
+
+#### v2
+
 ```js
 async function listenerKeepOpening(nodes){
 
@@ -459,9 +500,79 @@ async function listenerKeepOpening(nodes){
 }
 ```
 
+#### v3
+
+```js
+async function listenerKeepOpening(nodes){
+  const url = await searchUrl(nodes);
+  let wsEndpoint = url.replace('http', 'ws') + "/ws";
+  // WebSocket初期化
+  const lner = new WebSocket(wsEndpoint);
+  try{
+    // メッセージ受信時処理
+    lner.onmessage = function(e) {
+      // 受信データをJSON変換
+      data = JSON.parse(e.data);
+    
+      // WebSocket初期化後、ノードから uid を渡されるため保持しておく
+      if (data.uid != undefined) {
+        uid = data.uid;
+        return;
+      }
+    
+      // subscribe しているチャンネルであればコールバックを実行する
+      if (funcs.hasOwnProperty(data.topic)) {
+        funcs[data.topic].forEach(f => {
+          f(data.data);
+        });
+      }
+    };
+    // エラー時処理
+    lner.onerror = function(error) {
+      console.error(error.data);
+    };
+    // クローズ時処理
+    lner.onclose = async function(closeEvent) {
+      console.log("listener onclose");
+      uid = "";
+      funcs = {};
+      listener = await listenerKeepOpening(nodes);
+    };
+
+    // WebSocket がオープンされるまで待機
+    await new Promise((resolve, reject) => {
+      interval = setInterval(() => {
+        if (lner.readyState > 0) {
+          clearInterval(interval);
+          resolve();
+        }
+      }, 1000);      
+    });
+
+    // ブロック生成検知時の処理
+    addCallback(ListenerChannelName.block, (block) => {
+      console.log(block);
+    });
+    // ブロック生成検知設定
+    lner.send(JSON.stringify({
+      uid: uid,
+      subscribe: ListenerChannelName.block,
+    }));
+  }catch(e){
+    console.error("fail websocket", e);
+    return await listenerKeepOpening(nodes);
+  }
+  console.log("listener connected : ", lner.url);
+  return lner;
+}
+```
+
 リスナーがcloseした場合は再接続します。
 
 ##### リスナー開始
+
+#### v2, v3
+
 ```js
 listener = await listenerKeepOpening(NODES);
 ```
@@ -470,6 +581,8 @@ listener = await listenerKeepOpening(NODES);
 
 未署名のトランザクションを検知して、署名＆ネットワークにアナウンスします。  
 初期画面表示時と画面閲覧中の受信と２パターンの検知が必要です。  
+
+#### v2
 
 ```js
 //rxjsの読み込み
@@ -539,6 +652,160 @@ bondedSubscribe = function(observer){
 
 bondedSubscribe(bondedListener);
 bondedSubscribe(bondedHttp);
+``` 
+
+#### v3
+
+```js
+// 選択中アカウントの完了トランザクション検知リスナー
+const statusChanged = function(address,hash){
+  // 承認トランザクション検知時の処理
+  const confirmedChannelName = ListenerChannelName.confirmedAdded + "/" + address.toString();
+  addCallback(confirmedChannelName, (tx) => {
+    if (tx.meta.hash === hash.toString()) {
+      console.log(tx);
+    }
+  });
+  // 承認トランザクション検知設定
+  listener.send(JSON.stringify({
+    uid: uid,
+    subscribe: confirmedChannelName,
+  }));
+
+  // ステータス変更検知時の処理
+  const statusChannelName = ListenerChannelName.status + "/" + address.toString();
+  addCallback(statusChannelName, (status) => {
+    if (status.hash === hash.toString()) {
+      console.error(status);
+    }
+  });
+  // ステータス変更検知設定
+  listener.send(JSON.stringify({
+    uid: uid,
+    subscribe: statusChannelName,
+  }));
+}
+
+// 連署実行
+async function exeAggregateBondedCosignature(aggTx){
+  // インナートランザクションの署名者に自分が指定されている場合
+  if (aggTx.transaction.transactions.find(inTx => inTx.transaction.signerPublicKey === bobKey.publicKey.toString()) !== undefined) {
+    // Aliceのトランザクションで署名
+    cosignature = new symbolSdk.symbol.DetachedCosignature();
+    signTxHash = new symbolSdk.symbol.Hash256(symbolSdk.utils.hexToUint8(aggTx.meta.hash));
+    cosignature.parentHash = signTxHash;
+    cosignature.version = 0n;
+    cosignature.signerPublicKey = bobKey.publicKey;
+    cosignature.signature = new symbolSdk.symbol.Signature(bobKey.sign(signTxHash.bytes).bytes);
+
+    // アナウンス
+    body= {
+      "parentHash": cosignature.parentHash.toString(),
+      "signature": cosignature.signature.toString(),
+      "signerPublicKey": cosignature.signerPublicKey.toString(),
+      "version": cosignature.version.toString()
+    };
+    await fetch(
+      new URL('/transactions/cosignature', NODE),
+      {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      }
+    )
+    .then((res) => res.json())
+    .then((json) => {
+      return json;
+    });
+    statusChanged(bobAddress, signTxHash);
+  }
+}
+
+bondedSubscribe = async function(tx){
+  // すでに署名済みか確認するため、トランザクション情報を取得
+  body = {
+    "transactionIds": [tx.meta.hash]
+  };
+  partialTx = await fetch(
+    new URL('/transactions/partial', NODE),
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }
+  )
+  .then((res) => res.json())
+  .then((json) => {
+    if (json.length <= 0) {
+      return undefined;
+    }
+    return json[0];
+  });
+  if (partialTx === undefined){
+    cosole.error("get tx info failed.");
+    return;
+  }
+
+  // 署名済みか確認
+  if (!partialTx.transaction.hasOwnProperty("cosignatures")){
+    cosole.log("not aggregate tx.");
+    return;
+  }
+  bobCosignature = partialTx.transaction.cosignatures.find(c => {
+    return c.signerPublicKey === bobKey.publicKey.toString();
+  });
+  if (bobCosignature !== undefined && partialTx.transaction.signerPublicKey === bobKey.publicKey.toString()){
+    cosole.log("already signed.");
+    return;
+  }
+
+  console.log(partialTx);
+  exeAggregateBondedCosignature(partialTx);
+}
+
+// 署名が必要なアグリゲートボンデッドトランザクション発生検知時の処理
+channelName = ListenerChannelName.partialAdded + "/" + bobAddress.toString();
+addCallback(channelName, async (tx) => {
+  bondedSubscribe(tx);
+});
+// 署名が必要なアグリゲートボンデッドトランザクション発生検知設定
+listener.send(JSON.stringify({
+  uid: uid,
+  subscribe: channelName,
+}));
+
+// 指定アドレスのパーシャルトランザクションを検索する
+async function searchPartialTxes(address, page = 1){
+  query = new URLSearchParams({
+    "address": address.toString(),
+    "pageSize": 100,
+    "pageNumber": page,
+  });
+  bondedTxes = await fetch(
+    new URL('/transactions/partial?' + query.toString(), NODE),
+    {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+    }
+  )
+  .then((res) => res.json())
+  .then((json) => {
+    return json;
+  });
+  if (bondedTxes.data.length === 0) {
+    return [];
+  }
+  return bondedTxes.data.concat(await searchUnsignedBonded(address, page + 1));
+}
+// 指定アドレスの全てのパーシャルトランザクションを取得する
+async function getAllPartialTxes(address){
+  return await searchPartialTxes(address);
+}
+
+// 初期表示時
+(await getAllPartialTxes(bobAddress)).forEach(partialTx => {
+  bondedSubscribe(partialTx);
+});
 ```
 
 ##### 注意事項
