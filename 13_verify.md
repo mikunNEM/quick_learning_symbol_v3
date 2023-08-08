@@ -746,6 +746,26 @@ if (aliceInfo.supplementalPublicKeys.voting !== undefined) {
     votingPublicKeys = new Uint8Array([...votingPublicKeys, ...symbolSdk.utils.hexToUint8(key.publicKey)]);
   });
 }
+importanceSnapshots = new Uint8Array([]);
+if (parseInt(aliceInfo.importance) !== 0) {
+  importanceSnapshots = new Uint8Array([
+    ...Buffer.from(BigInt(aliceInfo.importance).toString(16).padStart(8 * 2, '0'),'hex').reverse(),
+    ...Buffer.from(BigInt(aliceInfo.importanceHeight).toString(16).padStart(8 * 2, '0'),'hex').reverse(),
+  ]);
+}
+activityBuckets = new Uint8Array([]);
+if (aliceInfo.importance > 0) {
+  for (idx = 0; idx < aliceInfo.activityBuckets.length || idx < 5; idx++) {
+    bucket = aliceInfo.activityBuckets[idx];
+    activityBuckets = new Uint8Array([
+      ...activityBuckets,
+      ...Buffer.from(BigInt(bucket.startHeight).toString(16).padStart(8 * 2, '0'),'hex').reverse(),
+      ...Buffer.from(BigInt(bucket.totalFeesPaid).toString(16).padStart(8 * 2, '0'),'hex').reverse(),
+      ...Buffer.from(bucket.beneficiaryCount.toString(16).padStart(4 * 2, '0'),'hex').reverse(),
+      ...Buffer.from(BigInt(bucket.rawScore).toString(16).padStart(8 * 2, '0'),'hex').reverse(),
+    ]);
+  }
+}
 balances = new Uint8Array([]);
 if (aliceInfo.mosaics.length > 0) {
   aliceInfo.mosaics.forEach(mosaic => {
@@ -763,8 +783,7 @@ accountInfoBytes = new Uint8Array([
   ...Buffer.from(supplementalPublicKeysMask.toString(16).padStart(1 * 2, '0'),'hex').reverse(),
   ...Buffer.from(votingPublicKeys.length.toString(16).padStart(1 * 2, '0'),'hex').reverse(),
   ...linkedPublicKey, ...nodePublicKey, ...vrfPublicKey, ...votingPublicKeys,
-  // importanceSnapshots,
-  // activityBuckets
+  ...importanceSnapshots, ...activityBuckets,
   ...Buffer.from(aliceInfo.mosaics.length.toString(16).padStart(2 * 2, '0'),'hex').reverse(), ...balances
 ]);
 aliceStateHash = symbolSdk.utils.uint8ToHex(hasher.update(accountInfoBytes).digest());
