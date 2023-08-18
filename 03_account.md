@@ -28,7 +28,7 @@ networkTypeは以下の通りです。
 
 #### v3
 
-v3 では `Account` クラスが無いため、秘密鍵・公開鍵の鍵セットとアドレスを別々に作成する必要あり。
+v3 では `Account` クラスが無いため、秘密鍵・公開鍵の鍵セットとアドレスを別々に作成する必要あります。
 
 ```js
 aliceKey = new symbolSdk.symbol.KeyPair(symbolSdk.PrivateKey.random());
@@ -265,11 +265,11 @@ console.log(accountInfo);
 #### publicKey
 クライアント側で作成しただけで、ブロックチェーンでまだ利用されていないアカウント情報は記録されていません。宛先として指定されて受信することで初めてアカウント情報が記録され、署名したトランザクションを送信することで公開鍵の情報が記録されます。そのため、publicKeyは現在`00000...`表記となっています。
 
-#### UInt64
-
-**※v3 では UInt64 がありません。**
+#### UInt64 ※v2 のみ
 
 JavaScriptでは大きすぎる数値はあふれてしまうため、idやamountはUInt64というsdkの独自フォーマットで管理されています。文字列に変換する場合は toString()、数値に変換する場合は compact()、16進数にする場合は toHex() で変換してください。
+
+#### v2
 
 ```js
 console.log("addressHeight:"); //アドレスが記録されたブロック高
@@ -283,9 +283,9 @@ accountInfo.mosaics.forEach(mosaic => {
 大きすぎるid値をcompactで数値変換するとエラーが発生することがあります。  
 `Compacted value is greater than Number.Max_Value.`
 
-#### BigInt
+#### v3
 
-v3 では所々で JavaScript の `BigInt` が使用されています。
+v3 では UInt64 は定義されておらず、大きすぎる数値を表現するために JavaScript の `BigInt` が使用されています。
 以降の章で登場するため、ここで構文を紹介します。
 
 ```js
@@ -373,6 +373,14 @@ encryptedMessage = alice.encryptMessage(message ,bob.publicAccount);
 console.log(encryptedMessage);
 ```
 
+```js
+> EncryptedMessage
+    payload: "C7451071F843015509C57BAA1C994C73E9FF1302CB2995423932D834A620532F54CF328B1CDA4426F8"
+  > recipientPublicAccount: PublicAccount
+      address: Address {address: 'TCUNO37PQOBCOTKHF3RXP4X7GOJ6LNRMBC2DFHI', networkType: 152}
+      publicKey: "662CEDF69962B1E0F1BF0C43A510DFB12190128B90F7FE9BA48B1249E8E10DBE"
+```
+
 #### v3
 
 ```js
@@ -383,7 +391,7 @@ console.log(Buffer.from(encryptedMessage).toString("hex").toUpperCase());
 ```
 
 ```js
-> 294C8979156C0D941270BAC191F7C689E93371EDBC36ADD8B920CF494012A97BA2D1A3759F9A6D55D5957E9D
+> 0167AF68C3E7EFBD7048F6E9140FAA14256B64DD19FD0708EDCF17758A81FCC00084D869D6F1434A77AF
 ```
 
 #### 復号化
@@ -393,7 +401,7 @@ console.log(Buffer.from(encryptedMessage).toString("hex").toUpperCase());
 ```js
 decryptMessage = bob.decryptMessage(
   new sym.EncryptedMessage(
-    "294C8979156C0D941270BAC191F7C689E93371EDBC36ADD8B920CF494012A97BA2D1A3759F9A6D55D5957E9D"
+    "C7451071F843015509C57BAA1C994C73E9FF1302CB2995423932D834A620532F54CF328B1CDA4426F8"
   ),
   alice.publicAccount
 ).payload
@@ -404,7 +412,29 @@ console.log(decryptMessage);
 
 ```js
 bobMsgEncoder = new symbolSdk.symbol.MessageEncoder(bobKey);
-decryptMessageData = bobMsgEncoder.tryDecode(aliceKey.publicKey, Uint8Array.from(Buffer.from("294C8979156C0D941270BAC191F7C689E93371EDBC36ADD8B920CF494012A97BA2D1A3759F9A6D55D5957E9D", "hex")));
+decryptMessageData = bobMsgEncoder.tryDecode(aliceKey.publicKey, Uint8Array.from(Buffer.from("0167AF68C3E7EFBD7048F6E9140FAA14256B64DD19FD0708EDCF17758A81FCC00084D869D6F1434A77AF", "hex")));
+console.log(decryptMessageData);
+if (decryptMessageData.isDecoded) {
+  decryptMessage = new TextDecoder().decode(decryptMessageData[1]);
+  console.log(decryptMessage);
+} else {
+  console.log("decrypt failed!");
+}
+```
+
+```js
+> {isDecoded: true, message: Uint8Array(13)}
+> "Hello Symbol!"
+```
+
+注意：
+v3.0.7 では復号化データの構造が異なります。
+v3.0.8 以降では、結果とメッセージを持つ **オブジェクト** ですが、v3.0.7 では結果とメッセージの **配列** です。
+このため、復号化したメッセージへのアクセス方法が異なります。
+
+##### v3.0.7
+
+```js
 if (decryptMessageData[0]) {
   decryptMessage = new TextDecoder().decode(decryptMessageData[1]);
   console.log(decryptMessage);
@@ -414,6 +444,7 @@ if (decryptMessageData[0]) {
 ```
 
 ```js
+> [true, Uint8Array(13)]
 > "Hello Symbol!"
 ```
 
