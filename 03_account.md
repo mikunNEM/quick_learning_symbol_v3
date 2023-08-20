@@ -415,7 +415,7 @@ bobMsgEncoder = new symbolSdk.symbol.MessageEncoder(bobKey);
 decryptMessageData = bobMsgEncoder.tryDecode(aliceKey.publicKey, Uint8Array.from(Buffer.from("0167AF68C3E7EFBD7048F6E9140FAA14256B64DD19FD0708EDCF17758A81FCC00084D869D6F1434A77AF", "hex")));
 console.log(decryptMessageData);
 if (decryptMessageData.isDecoded) {
-  decryptMessage = new TextDecoder().decode(decryptMessageData[1]);
+  decryptMessage = new TextDecoder().decode(decryptMessageData.message);
   console.log(decryptMessage);
 } else {
   console.log("decrypt failed!");
