@@ -7,14 +7,14 @@
 JavaScriptを使用します。
 
 ### SDK
-symbol-sdk-typescript-javascript v2.0.3  
+symbol-sdk-typescript-javascript v2.0.4  
 https://github.com/symbol/symbol-sdk-typescript-javascript
 
 上記SDKをbrowserify化したものをブラウザの開発者コンソールに読み込ませて使用します。  
 https://github.com/xembook/nem2-browserify
 
 ##### 注意
-現在 symbol-sdk v3.0.0がアルファ版としてリリースされており、v 2.0.3はdeprecatedです。  
+現在 symbol-sdk v3.0.0がアルファ版としてリリースされており、v 2.0.4はdeprecatedです。  
 v3ではrxjsに依存した多くの機能が削除されるため、REST APIへの直接アクセスが推奨されます。  
  
 ### リファレンス
@@ -63,7 +63,7 @@ F12キーを押して開発者コンソールを開き、以下のスクリプ�
 #### v2
 
 ```js
-(script = document.createElement('script')).src = 'https://xembook.github.io/nem2-browserify/symbol-sdk-pack-2.0.3.js';
+(script = document.createElement('script')).src = 'https://xembook.github.io/nem2-browserify/symbol-sdk-pack-2.0.4.js';
 document.getElementsByTagName('head')[0].appendChild(script);
 ```
 
