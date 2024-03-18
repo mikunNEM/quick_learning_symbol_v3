@@ -70,7 +70,8 @@ document.getElementsByTagName('head')[0].appendChild(script);
 #### v3
 
 ```js
-const symbolSdk = (await import('https://www.unpkg.com/symbol-sdk@latest/dist/bundle.web.js')).default;
+const SDK_VERSION = "3.1.0";
+const symbolSdk = (await import(`https://www.unpkg.com/symbol-sdk@${SDK_VERSION}/dist/bundle.web.js`)).default;
 
 // Buffer を読み込んでおく
 (script = document.createElement('script')).src = 'https://bundle.run/buffer@6.0.3';
