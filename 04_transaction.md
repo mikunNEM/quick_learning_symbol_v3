@@ -48,7 +48,7 @@ console.log(bob.address);
 #### v3
 
 ```js
-bobKey = new symbolSdk.symbol.KeyPair(symbolSdk.PrivateKey.random());
+bobKey = new sdkSymbol.KeyPair(sdkCore.PrivateKey.random());
 bobAddress = facade.network.publicKeyToAddress(bobKey.publicKey);
 console.log(bobAddress.toString());
 ```
@@ -74,18 +74,25 @@ tx = sym.TransferTransaction.create(
 #### v3
 
 ```js
+// v3.2.0 暫定対応（コミットf183132で修正されてるはず）
+// v3.2.0 では、facade.network.fromDatetime()でネットワークのタイムスタンプを取得すると、内部処理でオーバーフローしてエラーとなってしまう
+// このため、事前にネットワークのタイムスタンプを算出しておく
+differenceMilliseconds = (new Date()).getTime() - facade.network.datetimeConverter.epoch.getTime();
+networkTimestamp = new sdkSymbol.NetworkTimestamp(Math.trunc(differenceMilliseconds / facade.network.datetimeConverter.timeUnits))
+
 messageData = new Uint8Array([0x00,...(new TextEncoder('utf-8')).encode('Hello, Symbol!')]); //　平文メッセージ
 tx = facade.transactionFactory.create({
   type: 'transfer_transaction_v1',      // Txタイプ:転送Tx
   signerPublicKey: aliceKey.publicKey,  // 署名者公開鍵
-  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+//  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+  deadline: networkTimestamp.addHours(2).timestamp, //Deadline:有効期限
   recipientAddress: bobAddress.toString(),
   mosaics: [
   // { mosaicId: 0x72C0212E67A08BCEn, amount: 1000000n } // 1XYM送金
   ],
   message: messageData
 });
-tx.fee = new symbolSdk.symbol.Amount(BigInt(tx.size * 100)); //手数料
+tx.fee = new sdkSymbol.models.Amount(BigInt(tx.size * 100)); //手数料
 console.log(tx);
 ```
 
@@ -104,7 +111,12 @@ sym.Deadline.create(epochAdjustment,6)
 #### v3
 
 ```js
-facade.network.fromDatetime(Date.now()).addHours(6).timestamp
+// v3.2.0 暫定（コミットf183132で修正されてるはず）
+differenceMilliseconds = (new Date()).getTime() - facade.network.datetimeConverter.epoch.getTime();
+networkTimestamp = new sdkSymbol.NetworkTimestamp(Math.trunc(differenceMilliseconds / facade.network.datetimeConverter.timeUnits));
+networkTimestamp.addHours(6).timestamp;
+//// v3.2.1 以降はこっちになるはず
+// facade.network.fromDatetime(Date.now()).addHours(6).timestamp
 ```
 
 #### メッセージ
@@ -159,7 +171,7 @@ EncryptedMessageを使用すると、「指定したメッセージが暗号化�
 
 ```js
 message = 'Hello Symbol!';
-aliceMsgEncoder = new symbolSdk.symbol.MessageEncoder(aliceKey);
+aliceMsgEncoder = new sdkSymbol.MessageEncoder(aliceKey);
 messageData = aliceMsgEncoder.encode(bobKey.publicKey, new TextEncoder().encode(message));
 ```
 
@@ -209,7 +221,7 @@ tx = facade.transactionFactory.create({
   type: 'transfer_transaction_v1',      // Txタイプ:転送Tx
   // 省略
 });
-tx.fee = new symbolSdk.symbol.Amount(BigInt(tx.size * 100)); //手数料
+tx.fee = new sdkSymbol.models.Amount(BigInt(tx.size * 100)); //手数料
 ```
 
 ##### maxFee = 17600 として指定する方法
@@ -716,7 +728,7 @@ console.log(rawMessage);
 message = 'Hello Symbol!';
 plainMessage = new Uint8Array([0x00,...(new TextEncoder('utf-8')).encode('Hello, Symbol!')]);
 console.log(plainMessage);
-aliceMsgEncoder = new symbolSdk.symbol.MessageEncoder(aliceKey);
+aliceMsgEncoder = new sdkSymbol.MessageEncoder(aliceKey);
 encryptedMessage = aliceMsgEncoder.encode(bobKey.publicKey, new TextEncoder().encode(message));
 console.log(encryptedMessage);
 rawMessage = new Uint8Array([0xFF, 0x10, 0x20, 0x30]);
@@ -783,21 +795,28 @@ console.log(signedTx.hash);
 
 ```js
 // 暗号化メッセージの作成
-aliceMsgEncoder = new symbolSdk.symbol.MessageEncoder(aliceKey);
+aliceMsgEncoder = new sdkSymbol.MessageEncoder(aliceKey);
 encryptedMessage = aliceMsgEncoder.encode(bobKey.publicKey, new TextEncoder().encode("Hello Symbol!"));
+
+// v3.2.0 暫定対応（コミットf183132で修正されてるはず）
+// v3.2.0 では、facade.network.fromDatetime()でネットワークのタイムスタンプを取得すると、内部処理でオーバーフローしてエラーとなってしまう
+// このため、事前にネットワークのタイムスタンプを算出しておく
+differenceMilliseconds = (new Date()).getTime() - facade.network.datetimeConverter.epoch.getTime();
+networkTimestamp = new sdkSymbol.NetworkTimestamp(Math.trunc(differenceMilliseconds / facade.network.datetimeConverter.timeUnits))
 
 // Tx 作成
 tx = facade.transactionFactory.create({
   type: 'transfer_transaction_v1',      // Txタイプ:転送Tx
   signerPublicKey: aliceKey.publicKey,  // 署名者公開鍵
-  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+//  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+  deadline: networkTimestamp.addHours(2).timestamp, //Deadline:有効期限
   recipientAddress: bobAddress.toString(),
   mosaics: [
   // { mosaicId: 0x72C0212E67A08BCEn, amount: 1000000n } // 1XYM送金
   ],
   message: encryptedMessage
 });
-tx.fee = new symbolSdk.symbol.Amount(BigInt(tx.size * 100)); //手数料
+tx.fee = new sdkSymbol.models.Amount(BigInt(tx.size * 100)); //手数料
 
 // 署名とアナウンス
 sig = facade.signTransaction(aliceKey, tx);
@@ -853,7 +872,7 @@ txInfo = await fetch(
 });
 
 // メッセージを復号化して表示
-bobMsgEncoder = new symbolSdk.symbol.MessageEncoder(bobKey);
+bobMsgEncoder = new sdkSymbol.MessageEncoder(bobKey);
 console.log(bobMsgEncoder.tryDecode(aliceKey.publicKey, Buffer.from(txInfo.transaction.message, "hex")));
 ```
 ```js
@@ -872,7 +891,7 @@ v2 で作成したメッセージを v3 で読み込むためには、16進数�
 messageV2 = txInfo.transaction.message.substr(2); // メッセージタイプを取り除く
 hex1 = Buffer.from(messageV2, "hex");             // 1回目の16進数文字列から戻す変換
 hex2 = Buffer.from(hex1.toString(), "hex");       // 2回目の16進数文字列から戻す変換
-bobMsgEncoder = new symbolSdk.symbol.MessageEncoder(bobKey);
+bobMsgEncoder = new sdkSymbol.MessageEncoder(bobKey);
 console.log(bobMsgEncoder.tryDecode(aliceKey.publicKey, new Uint8Array([0x01, ...hex2])));  // メッセージタイプ 0x01 を付けてメッセージを復号する
 ```
 
@@ -898,8 +917,8 @@ v2 で読み込めるようにするため、 v3 でメッセージを作成す�
 
 ```js
 // 暗号化メッセージの作成
-aliceMsgEncoder = new symbolSdk.symbol.MessageEncoder(aliceKey);
-encrypted = aliceMsgEncoder.encode(bobKey.publicKey, "Hello Symbol!");
+aliceMsgEncoder = new sdkSymbol.MessageEncoder(aliceKey);
+encrypted = aliceMsgEncoder.encode(bobKey.publicKey, new TextEncoder().encode("Hello Symbol!"));
 hex1 = Buffer.from(encrypted).subarray(1).toString("hex").toUpperCase();
 encryptedMessage = new Uint8Array([0x01, ...(new TextEncoder().encode(hex1))]);
 // Tx作成、アナウンス
@@ -971,9 +990,9 @@ await txRepo.announce(signedTx).toPromise();
 #### v3
 
 ```js
-bobKey = new symbolSdk.symbol.KeyPair(symbolSdk.PrivateKey.random());
+bobKey = new sdkSymbol.KeyPair(sdkCore.PrivateKey.random());
 bobAddress = facade.network.publicKeyToAddress(bobKey.publicKey);
-carolKey = new symbolSdk.symbol.KeyPair(symbolSdk.PrivateKey.random());
+carolKey = new sdkSymbol.KeyPair(sdkCore.PrivateKey.random());
 carolAddress = facade.network.publicKeyToAddress(carolKey.publicKey);
 
 // アグリゲートTxに含めるTxを作成
@@ -998,15 +1017,20 @@ embeddedTransactions = [
 ];
 merkleHash = facade.constructor.hashEmbeddedTransactions(embeddedTransactions);
 
+// v3.2.0 暫定（コミットf183132で修正されてるはず）
+differenceMilliseconds = (new Date()).getTime() - facade.network.datetimeConverter.epoch.getTime();
+networkTimestamp = new sdkSymbol.NetworkTimestamp(Math.trunc(differenceMilliseconds / facade.network.datetimeConverter.timeUnits));
+
 // アグリゲートTx作成
 aggregateTx = facade.transactionFactory.create({
   type: 'aggregate_complete_transaction_v2',
   signerPublicKey: aliceKey.publicKey,  // 署名者公開鍵
-  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+//  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+  deadline: networkTimestamp.addHours(2).timestamp, //Deadline:有効期限
   transactionsHash: merkleHash,
   transactions: embeddedTransactions
 });
-aggregateTx.fee = new symbolSdk.symbol.Amount(1000000n); //手数料
+aggregateTx.fee = new sdkSymbol.models.Amount(1000000n); //手数料
 
 // 署名とアナウンス
 sig = facade.signTransaction(aliceKey, aggregateTx);
@@ -1055,7 +1079,8 @@ aggregateTx = sym.AggregateTransaction.createComplete(
 aggregateTx = facade.transactionFactory.create({
   type: 'aggregate_complete_transaction_v2',
   signerPublicKey: aliceKey.publicKey,  // 署名者公開鍵
-  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+//  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+  deadline: networkTimestamp.addHours(2).timestamp, //Deadline:有効期限
   transactionsHash: merkleHash,
   transactions: embeddedTransactions
 });
@@ -1065,7 +1090,7 @@ requiredCosignatures = 1; // 必要な連署者の数を指定
 calculatedCosignatures = requiredCosignatures > aggregateTx.cosignatures.length ? requiredCosignatures : aggregateTx.cosignatures.length;
 sizePerCosignature = 8 + 32 + 64;
 calculatedSize = aggregateTx.size - aggregateTx.cosignatures.length * sizePerCosignature + calculatedCosignatures * sizePerCosignature;
-aggregateTx.fee = new symbolSdk.symbol.Amount(BigInt(calculatedSize * 100)); //手数料
+aggregateTx.fee = new sdkSymbol.models.Amount(BigInt(calculatedSize * 100)); //手数料
 ```
 
 ## 4.7 現場で使えるヒント

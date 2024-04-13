@@ -34,17 +34,17 @@ console.log(carol5.privateKey);
 #### v3
 
 ```js
-bobKey = new symbolSdk.symbol.KeyPair(symbolSdk.PrivateKey.random());
+bobKey = new sdkSymbol.KeyPair(sdkCore.PrivateKey.random());
 bobAddress = facade.network.publicKeyToAddress(bobKey.publicKey);
-carol1Key = new symbolSdk.symbol.KeyPair(symbolSdk.PrivateKey.random());
+carol1Key = new sdkSymbol.KeyPair(sdkCore.PrivateKey.random());
 carol1Address = facade.network.publicKeyToAddress(carol1Key.publicKey);
-carol2Key = new symbolSdk.symbol.KeyPair(symbolSdk.PrivateKey.random());
+carol2Key = new sdkSymbol.KeyPair(sdkCore.PrivateKey.random());
 carol2Address = facade.network.publicKeyToAddress(carol2Key.publicKey);
-carol3Key = new symbolSdk.symbol.KeyPair(symbolSdk.PrivateKey.random());
+carol3Key = new sdkSymbol.KeyPair(sdkCore.PrivateKey.random());
 carol3Address = facade.network.publicKeyToAddress(carol3Key.publicKey);
-carol4Key = new symbolSdk.symbol.KeyPair(symbolSdk.PrivateKey.random());
+carol4Key = new sdkSymbol.KeyPair(sdkCore.PrivateKey.random());
 carol4Address = facade.network.publicKeyToAddress(carol4Key.publicKey);
-carol5Key = new symbolSdk.symbol.KeyPair(symbolSdk.PrivateKey.random());
+carol5Key = new sdkSymbol.KeyPair(sdkCore.PrivateKey.random());
 carol5Address = facade.network.publicKeyToAddress(carol5Key.publicKey);
 
 console.log(bobKey.privateKey.toString());
@@ -75,6 +75,8 @@ console.log("https://testnet.symbol.tools/?recipient=" + carol1.address.plain() 
 console.log("https://testnet.symbol.tools/?recipient=" + bobAddress.toString() +"&amount=20");
 console.log("https://testnet.symbol.tools/?recipient=" + carol1Address.toString() +"&amount=20");
 ```
+
+※2024/4 現在、FAUCETは X(旧:Twitter) 認証が必要となります。また、数量(amount)の指定は受け付けないため、サインイン後に入力する必要があります。
 
 ## 9.1 マルチシグの登録
 
@@ -135,11 +137,18 @@ embeddedTransactions = [
 ];
 merkleHash = facade.constructor.hashEmbeddedTransactions(embeddedTransactions);
 
+// v3.2.0 暫定対応（コミットf183132で修正されてるはず）
+// v3.2.0 では、facade.network.fromDatetime()でネットワークのタイムスタンプを取得すると、内部処理でオーバーフローしてエラーとなってしまう
+// このため、事前にネットワークのタイムスタンプを算出しておく
+differenceMilliseconds = (new Date()).getTime() - facade.network.datetimeConverter.epoch.getTime();
+networkTimestamp = new sdkSymbol.NetworkTimestamp(Math.trunc(differenceMilliseconds / facade.network.datetimeConverter.timeUnits))
+
 // アグリゲートTx作成
 aggregateTx = facade.transactionFactory.create({
   type: 'aggregate_complete_transaction_v2',
   signerPublicKey: bobKey.publicKey,  // マルチシグ化したいアカウントの公開鍵を指定
-  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+//  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+  deadline: networkTimestamp.addHours(2).timestamp, //Deadline:有効期限
   transactionsHash: merkleHash,
   transactions: embeddedTransactions
 });
@@ -149,7 +158,7 @@ requiredCosignatures = 4; // 連署者の数:4
 calculatedCosignatures = requiredCosignatures > aggregateTx.cosignatures.length ? requiredCosignatures : aggregateTx.cosignatures.length;
 sizePerCosignature = 8 + 32 + 64;
 calculatedSize = aggregateTx.size - aggregateTx.cosignatures.length * sizePerCosignature + calculatedCosignatures * sizePerCosignature;
-aggregateTx.fee = new symbolSdk.symbol.Amount(BigInt(calculatedSize * 100)); //手数料
+aggregateTx.fee = new sdkSymbol.models.Amount(BigInt(calculatedSize * 100)); //手数料
 
 // マルチシグ化したいアカウントによる署名
 sig = facade.signTransaction(bobKey, aggregateTx);
@@ -171,7 +180,7 @@ await fetch(
   {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({"payload": symbolSdk.utils.uint8ToHex(aggregateTx.serialize())}),
+    body: JSON.stringify({"payload": sdkCore.utils.uint8ToHex(aggregateTx.serialize())}),
   }
 )
 .then((res) => res.json())
@@ -218,7 +227,7 @@ multisigInfo = await fetch(
 )
 .then((res) => res.json())
 .then((json) => {
-  return json.account;
+  return json.multisig;
 });
 console.log(multisigInfo);
 ```
@@ -277,7 +286,7 @@ multisigInfo = await fetch(
 )
 .then((res) => res.json())
 .then((json) => {
-  return json.account;
+  return json.multisig;
 });
 console.log(multisigInfo);
 ```
@@ -336,7 +345,7 @@ await txRepo.announce(signedTx).toPromise();
 #### v3
 
 ```js
-namespaceIds = symbolSdk.symbol.generateNamespacePath("symbol.xym");
+namespaceIds = sdkSymbol.generateNamespacePath("symbol.xym");
 namespaceId = namespaceIds[namespaceIds.length - 1];
 
 // アグリゲートTxに含めるTxを作成
@@ -356,11 +365,18 @@ embeddedTransactions = [
 ];
 merkleHash = facade.constructor.hashEmbeddedTransactions(embeddedTransactions);
 
+// v3.2.0 暫定対応（コミットf183132で修正されてるはず）
+// v3.2.0 では、facade.network.fromDatetime()でネットワークのタイムスタンプを取得すると、内部処理でオーバーフローしてエラーとなってしまう
+// このため、事前にネットワークのタイムスタンプを算出しておく
+differenceMilliseconds = (new Date()).getTime() - facade.network.datetimeConverter.epoch.getTime();
+networkTimestamp = new sdkSymbol.NetworkTimestamp(Math.trunc(differenceMilliseconds / facade.network.datetimeConverter.timeUnits))
+
 // アグリゲートTx作成
 aggregateTx = facade.transactionFactory.create({
   type: 'aggregate_complete_transaction_v2',
   signerPublicKey: carol1Key.publicKey,  // 起案者アカウントの公開鍵を指定
-  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+//  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+  deadline: networkTimestamp.addHours(2).timestamp, //Deadline:有効期限
   transactionsHash: merkleHash,
   transactions: embeddedTransactions
 });
@@ -370,7 +386,7 @@ requiredCosignatures = 2; // 連署者の数:2
 calculatedCosignatures = requiredCosignatures > aggregateTx.cosignatures.length ? requiredCosignatures : aggregateTx.cosignatures.length;
 sizePerCosignature = 8 + 32 + 64;
 calculatedSize = aggregateTx.size - aggregateTx.cosignatures.length * sizePerCosignature + calculatedCosignatures * sizePerCosignature;
-aggregateTx.fee = new symbolSdk.symbol.Amount(BigInt(calculatedSize * 100)); //手数料
+aggregateTx.fee = new sdkSymbol.models.Amount(BigInt(calculatedSize * 100)); //手数料
 
 // 起案者アカウントによる署名
 sig = facade.signTransaction(carol1Key, aggregateTx);
@@ -388,7 +404,7 @@ await fetch(
   {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({"payload": symbolSdk.utils.uint8ToHex(aggregateTx.serialize())}),
+    body: JSON.stringify({"payload": sdkCore.utils.uint8ToHex(aggregateTx.serialize())}),
   }
 )
 .then((res) => res.json())
@@ -445,7 +461,7 @@ await txRepo.announceAggregateBonded(signedAggregateTx).toPromise();
 #### v3
 
 ```js
-namespaceIds = symbolSdk.symbol.generateNamespacePath("symbol.xym");
+namespaceIds = sdkSymbol.generateNamespacePath("symbol.xym");
 namespaceId = namespaceIds[namespaceIds.length - 1];
 
 // アグリゲートTxに含めるTxを作成
@@ -465,11 +481,18 @@ embeddedTransactions = [
 ];
 merkleHash = facade.constructor.hashEmbeddedTransactions(embeddedTransactions);
 
+// v3.2.0 暫定対応（コミットf183132で修正されてるはず）
+// v3.2.0 では、facade.network.fromDatetime()でネットワークのタイムスタンプを取得すると、内部処理でオーバーフローしてエラーとなってしまう
+// このため、事前にネットワークのタイムスタンプを算出しておく
+differenceMilliseconds = (new Date()).getTime() - facade.network.datetimeConverter.epoch.getTime();
+networkTimestamp = new sdkSymbol.NetworkTimestamp(Math.trunc(differenceMilliseconds / facade.network.datetimeConverter.timeUnits))
+
 // アグリゲートTx作成
 aggregateTx = facade.transactionFactory.create({
   type: 'aggregate_bonded_transaction_v2',
   signerPublicKey: carol1Key.publicKey,  // 起案者アカウントの公開鍵を指定
-  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+//  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+  deadline: networkTimestamp.addHours(2).timestamp, //Deadline:有効期限
   transactionsHash: merkleHash,
   transactions: embeddedTransactions
 });
@@ -479,22 +502,29 @@ requiredCosignatures = 2; // 連署者の数:2
 calculatedCosignatures = requiredCosignatures > aggregateTx.cosignatures.length ? requiredCosignatures : aggregateTx.cosignatures.length;
 sizePerCosignature = 8 + 32 + 64;
 calculatedSize = aggregateTx.size - aggregateTx.cosignatures.length * sizePerCosignature + calculatedCosignatures * sizePerCosignature;
-aggregateTx.fee = new symbolSdk.symbol.Amount(BigInt(calculatedSize * 100)); //手数料
+aggregateTx.fee = new sdkSymbol.models.Amount(BigInt(calculatedSize * 100)); //手数料
 
 // 署名
 sig = facade.signTransaction(carol1Key, aggregateTx);
 jsonPayload = facade.transactionFactory.constructor.attachSignature(aggregateTx, sig);
 
+// v3.2.0 暫定対応（コミットf183132で修正されてるはず）
+// v3.2.0 では、facade.network.fromDatetime()でネットワークのタイムスタンプを取得すると、内部処理でオーバーフローしてエラーとなってしまう
+// このため、事前にネットワークのタイムスタンプを算出しておく
+differenceMilliseconds = (new Date()).getTime() - facade.network.datetimeConverter.epoch.getTime();
+networkTimestamp = new sdkSymbol.NetworkTimestamp(Math.trunc(differenceMilliseconds / facade.network.datetimeConverter.timeUnits))
+
 // ハッシュロックTx作成
 hashLockTx = facade.transactionFactory.create({
   type: 'hash_lock_transaction_v1',     // Txタイプ:ハッシュロックTx
   signerPublicKey: carol1Key.publicKey, // 起案者アカウントの公開鍵を指定
-  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+//  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+  deadline: networkTimestamp.addHours(2).timestamp, //Deadline:有効期限
   mosaic: { mosaicId: namespaceId, amount: 10n * 1000000n },  // 10xym固定値
-  duration: new symbolSdk.symbol.BlockDuration(480n),         // ロック有効期限
+  duration: new sdkSymbol.models.BlockDuration(480n),         // ロック有効期限
   hash: facade.hashTransaction(aggregateTx)                   // アグリゲートトランザクションのハッシュ値を登録
 });
-hashLockTx.fee = new symbolSdk.symbol.Amount(BigInt(hashLockTx.size * 100)); // 手数料
+hashLockTx.fee = new sdkSymbol.models.Amount(BigInt(hashLockTx.size * 100)); // 手数料
 
 // 署名
 hashLockSig = facade.signTransaction(carol1Key, hashLockTx);
@@ -684,24 +714,24 @@ console.log(txInfo);
   - Bob
     - txInfo.transaction.transactions[0].transaction.signerPublicKey
       - 09F81ED97EBB0A85C6DFEACF2B518EFB471BEDA18709EF4C60823B21698B7B22
-    - facade.network.publicKeyToAddress(new symbolSdk.symbol.PublicKey(txInfo.transaction.transactions[0].transaction.signerPublicKey)).toString()
+    - facade.network.publicKeyToAddress(new sdkSymbol.models.PublicKey(txInfo.transaction.transactions[0].transaction.signerPublicKey)).toString()
       - TAUBDCXUGTUDJXKF2PSETQ62JGAESZCBNYSUW7Y
 - 起案者アカウント
   - Carol1
     - txInfo.transaction.signerPublicKey
       - E20A3B5BC132EBE9B075F1B326FE1C4C8827ACEF0DF7F24082D6C6A4A708980B
-    - facade.network.publicKeyToAddress(new symbolSdk.symbol.PublicKey(txInfo.transaction.signerPublicKey)).toString()
+    - facade.network.publicKeyToAddress(new sdkSymbol.models.PublicKey(txInfo.transaction.signerPublicKey)).toString()
       - TCMMKDQUV45LRBU2HJZNLRT32MN7GLX76PLMULQ
 - 連署者アカウント
   - Carol3
     - txInfo.transaction.cosignatures[1].signerPublicKey
       - A33F1B26DE7498EAE8D27A084323BB9D3AA95486F879F248B679A3DEB06D6431
-    - facade.network.publicKeyToAddress(new symbolSdk.symbol.PublicKey(txInfo.transaction.cosignatures[1].signerPublicKey)).toString()
+    - facade.network.publicKeyToAddress(new sdkSymbol.models.PublicKey(txInfo.transaction.cosignatures[1].signerPublicKey)).toString()
       - TB2EIC366LCAORC3AWQNR4ZFHWBPBU47VKOPD5Q
   - Carol3
     - txInfo.transaction.cosignatures[0].signerPublicKey
       - 0ABC3E2B403C9E1597DF04C8E9AE1E9D3F22D70D87A0A7BDC8D1B16BB9D324DD
-    - facade.network.publicKeyToAddress(new symbolSdk.symbol.PublicKey(txInfo.transaction.cosignatures[0].signerPublicKey)).toString()
+    - facade.network.publicKeyToAddress(new sdkSymbol.models.PublicKey(txInfo.transaction.cosignatures[0].signerPublicKey)).toString()
       - TDTW4SWRMI64JM7TK6RJZFEW5XKI4KBQVPQM7QY
 
 ## 9.5 マルチシグ構成変更
@@ -760,11 +790,18 @@ embeddedTransactions = [
 ];
 merkleHash = facade.constructor.hashEmbeddedTransactions(embeddedTransactions);
 
+// v3.2.0 暫定対応（コミットf183132で修正されてるはず）
+// v3.2.0 では、facade.network.fromDatetime()でネットワークのタイムスタンプを取得すると、内部処理でオーバーフローしてエラーとなってしまう
+// このため、事前にネットワークのタイムスタンプを算出しておく
+differenceMilliseconds = (new Date()).getTime() - facade.network.datetimeConverter.epoch.getTime();
+networkTimestamp = new sdkSymbol.NetworkTimestamp(Math.trunc(differenceMilliseconds / facade.network.datetimeConverter.timeUnits))
+
 // アグリゲートTx作成
 aggregateTx = facade.transactionFactory.create({
   type: 'aggregate_complete_transaction_v2',
   signerPublicKey: carol1Key.publicKey,  // 起案者アカウントの公開鍵を指定
-  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+//  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+  deadline: networkTimestamp.addHours(2).timestamp, //Deadline:有効期限
   transactionsHash: merkleHash,
   transactions: embeddedTransactions
 });
@@ -774,7 +811,7 @@ requiredCosignatures = 2; // 連署者の数:2
 calculatedCosignatures = requiredCosignatures > aggregateTx.cosignatures.length ? requiredCosignatures : aggregateTx.cosignatures.length;
 sizePerCosignature = 8 + 32 + 64;
 calculatedSize = aggregateTx.size - aggregateTx.cosignatures.length * sizePerCosignature + calculatedCosignatures * sizePerCosignature;
-aggregateTx.fee = new symbolSdk.symbol.Amount(BigInt(calculatedSize * 100)); //手数料
+aggregateTx.fee = new sdkSymbol.models.Amount(BigInt(calculatedSize * 100)); //手数料
 
 // 起案者アカウントによる署名
 sig = facade.signTransaction(carol1Key, aggregateTx);
@@ -792,7 +829,7 @@ await fetch(
   {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({"payload": symbolSdk.utils.uint8ToHex(aggregateTx.serialize())}),
+    body: JSON.stringify({"payload": sdkCore.utils.uint8ToHex(aggregateTx.serialize())}),
   }
 )
 .then((res) => res.json())
@@ -857,11 +894,18 @@ embeddedTransactions = [
 ];
 merkleHash = facade.constructor.hashEmbeddedTransactions(embeddedTransactions);
 
+// v3.2.0 暫定対応（コミットf183132で修正されてるはず）
+// v3.2.0 では、facade.network.fromDatetime()でネットワークのタイムスタンプを取得すると、内部処理でオーバーフローしてエラーとなってしまう
+// このため、事前にネットワークのタイムスタンプを算出しておく
+differenceMilliseconds = (new Date()).getTime() - facade.network.datetimeConverter.epoch.getTime();
+networkTimestamp = new sdkSymbol.NetworkTimestamp(Math.trunc(differenceMilliseconds / facade.network.datetimeConverter.timeUnits))
+
 // アグリゲートTx作成
 aggregateTx = facade.transactionFactory.create({
   type: 'aggregate_complete_transaction_v2',
   signerPublicKey: carol1Key.publicKey,  // 起案者アカウントの公開鍵を指定
-  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+//  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+  deadline: networkTimestamp.addHours(2).timestamp, //Deadline:有効期限
   transactionsHash: merkleHash,
   transactions: embeddedTransactions
 });
@@ -871,7 +915,7 @@ requiredCosignatures = 2; // 連署者の数:2
 calculatedCosignatures = requiredCosignatures > aggregateTx.cosignatures.length ? requiredCosignatures : aggregateTx.cosignatures.length;
 sizePerCosignature = 8 + 32 + 64;
 calculatedSize = aggregateTx.size - aggregateTx.cosignatures.length * sizePerCosignature + calculatedCosignatures * sizePerCosignature;
-aggregateTx.fee = new symbolSdk.symbol.Amount(BigInt(calculatedSize * 100)); //手数料
+aggregateTx.fee = new sdkSymbol.models.Amount(BigInt(calculatedSize * 100)); //手数料
 
 // 起案者アカウントによる署名
 sig = facade.signTransaction(carol1Key, aggregateTx);
@@ -891,7 +935,7 @@ await fetch(
   {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({"payload": symbolSdk.utils.uint8ToHex(aggregateTx.serialize())}),
+    body: JSON.stringify({"payload": sdkCore.utils.uint8ToHex(aggregateTx.serialize())}),
   }
 )
 .then((res) => res.json())

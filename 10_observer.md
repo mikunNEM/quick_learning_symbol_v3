@@ -140,7 +140,7 @@ listener.open().then(() => {
 // 承認トランザクション検知時の処理
 channelName = ListenerChannelName.confirmedAdded + "/" + aliceAddress.toString();
 addCallback(channelName, (tx) => {
-  console.log(tx);
+  console.log("confirmed added", tx);
 });
 // 承認トランザクション検知設定
 listener.send(JSON.stringify({
@@ -151,7 +151,7 @@ listener.send(JSON.stringify({
 // 未承認トランザクション検知時の処理
 channelName = ListenerChannelName.unconfirmedAdded + "/" + aliceAddress.toString();
 addCallback(channelName, (tx) => {
-  console.log(tx);
+  console.log("unconfirmed added", tx);
 });
 // 未承認トランザクション検知設定
 listener.send(JSON.stringify({
@@ -238,7 +238,7 @@ listener.newBlock()をしておくと、約30秒ごとに通信が発生する�
 ```js
 // ブロック生成検知時の処理
 addCallback(ListenerChannelName.block, (block) => {
-  console.log(block);
+  console.log("block", block);
 });
 // ブロック生成検知設定
 listener.send(JSON.stringify({
@@ -317,7 +317,7 @@ listener.open().then(() => {
 // 署名が必要なアグリゲートボンデッドトランザクション発生検知時の処理
 channelName = ListenerChannelName.partialAdded + "/" + aliceAddress.toString();
 addCallback(channelName, (tx) => {
-  console.log(tx);
+  console.log("partial added", tx);
 });
 // 署名が必要なアグリゲートボンデッドトランザクション発生検知設定
 listener.send(JSON.stringify({
@@ -459,8 +459,8 @@ function searchUrl(nodes){
         )
         .then((res) => res.json())
         .then((json) => {
-          identifier = json.network.identifier;                   // v3 only
-          facade = new symbolSdk.facade.SymbolFacade(identifier); // v3 only
+          identifier = json.network.identifier;            // v3 only
+          facade = new sdkSymbol.SymbolFacade(identifier); // v3 only
           e = json.network.epochAdjustment;
           return Number(e.substring(0, e.length - 1));
         });
@@ -657,6 +657,12 @@ bondedSubscribe(bondedHttp);
 #### v3
 
 ```js
+// 前提条件
+// ・「3.1 アカウント生成」に従い、 alice と bob のアカウントを生成してください (新規生成 / 秘密鍵からアカウント生成 はどちらでも構いません)
+// ・alice と bob でマルチシグを登録しておいてください
+// ・alice を起案者としたアグリゲートボンデッドトランザクションを発行しておいてください (bob による連署は行わない)
+// ・ページリロードした場合等、「10.1 リスナー設定」未実施の場合は実行しておいてください
+
 // 選択中アカウントの完了トランザクション検知リスナー
 const statusChanged = function(address,hash){
   // 承認トランザクション検知時の処理
@@ -689,14 +695,14 @@ const statusChanged = function(address,hash){
 // 連署実行
 async function exeAggregateBondedCosignature(aggTx){
   // インナートランザクションの署名者に自分が指定されている場合
-  if (aggTx.transaction.transactions.find(inTx => inTx.transaction.signerPublicKey === bobKey.publicKey.toString()) !== undefined) {
+  if (aggTx.transaction.transactions.find(inTx => inTx.transaction.signerPublicKey === bobKey.publicKey.toString()) === undefined) {
     // Aliceのトランザクションで署名
-    cosignature = new symbolSdk.symbol.DetachedCosignature();
-    signTxHash = new symbolSdk.symbol.Hash256(symbolSdk.utils.hexToUint8(aggTx.meta.hash));
+    cosignature = new sdkSymbol.models.DetachedCosignature();
+    signTxHash = new sdkCore.Hash256(sdkCore.utils.hexToUint8(aggTx.meta.hash));
     cosignature.parentHash = signTxHash;
     cosignature.version = 0n;
     cosignature.signerPublicKey = bobKey.publicKey;
-    cosignature.signature = new symbolSdk.symbol.Signature(bobKey.sign(signTxHash.bytes).bytes);
+    cosignature.signature = new sdkSymbol.models.Signature(bobKey.sign(signTxHash.bytes).bytes);
 
     // アナウンス
     body= {
@@ -764,7 +770,7 @@ bondedSubscribe = async function(tx){
 }
 
 // 署名が必要なアグリゲートボンデッドトランザクション発生検知時の処理
-channelName = ListenerChannelName.partialAdded + "/" + bobAddress.toString();
+channelName = ListenerChannelName.partialAdded + "/" + aliceAddress.toString();
 addCallback(channelName, async (tx) => {
   bondedSubscribe(tx);
 });
@@ -795,7 +801,7 @@ async function searchPartialTxes(address, page = 1){
   if (bondedTxes.data.length === 0) {
     return [];
   }
-  return bondedTxes.data.concat(await searchUnsignedBonded(address, page + 1));
+  return bondedTxes.data.concat(await searchPartialTxes(address, page + 1));
 }
 // 指定アドレスの全てのパーシャルトランザクションを取得する
 async function getAllPartialTxes(address){
@@ -806,6 +812,9 @@ async function getAllPartialTxes(address){
 (await getAllPartialTxes(bobAddress)).forEach(partialTx => {
   bondedSubscribe(partialTx);
 });
+
+// プログラムを実行すると、前提条件として発行しておいたアグリゲートボンデッドトランザクションに自動署名されます
+// 以降、 alice を起案者としたアグリゲートボンデッドトランザクションが発行されると bob で自動署名されます
 ```
 
 ##### 注意事項

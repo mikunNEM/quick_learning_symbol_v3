@@ -104,16 +104,23 @@ await txRepo.announce(signedTx).toPromise();
 // ネームスペース設定
 name = "xembook";  // 作成するルートネームスペース
 
+// v3.2.0 暫定対応（コミットf183132で修正されてるはず）
+// v3.2.0 では、facade.network.fromDatetime()でネットワークのタイムスタンプを取得すると、内部処理でオーバーフローしてエラーとなってしまう
+// このため、事前にネットワークのタイムスタンプを算出しておく
+differenceMilliseconds = (new Date()).getTime() - facade.network.datetimeConverter.epoch.getTime();
+networkTimestamp = new sdkSymbol.NetworkTimestamp(Math.trunc(differenceMilliseconds / facade.network.datetimeConverter.timeUnits))
+
 // Tx作成
 tx = facade.transactionFactory.create({
   type: 'namespace_registration_transaction_v1',        // Txタイプ:ネームスペース登録Tx
   signerPublicKey: aliceKey.publicKey,                  // 署名者公開鍵
-  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
-  duration: new symbolSdk.symbol.BlockDuration(86400n), // duration:有効期限
-  registrationType: symbolSdk.symbol.NamespaceRegistrationType.ROOT,
+//  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+  deadline: networkTimestamp.addHours(2).timestamp, //Deadline:有効期限
+  duration: new sdkSymbol.models.BlockDuration(86400n), // duration:有効期限
+  registrationType: sdkSymbol.models.NamespaceRegistrationType.ROOT,
   name: (new TextEncoder('utf-8')).encode(name)
 });
-tx.fee = new symbolSdk.symbol.Amount(BigInt(tx.size * 100)); //手数料
+tx.fee = new sdkSymbol.models.Amount(BigInt(tx.size * 100)); //手数料
 
 // 署名とアナウンス
 sig = facade.signTransaction(aliceKey, tx);
@@ -151,19 +158,26 @@ await txRepo.announce(signedTx).toPromise();
 
 ```js
 // ネームスペース設定
-parentNameId = symbolSdk.symbol.generateNamespaceId("xembook"); // 紐づけたいルートネームスペース
+parentNameId = sdkSymbol.generateNamespaceId("xembook"); // 紐づけたいルートネームスペース
 name = "tomato";  // 作成するサブネームスペース
+
+// v3.2.0 暫定対応（コミットf183132で修正されてるはず）
+// v3.2.0 では、facade.network.fromDatetime()でネットワークのタイムスタンプを取得すると、内部処理でオーバーフローしてエラーとなってしまう
+// このため、事前にネットワークのタイムスタンプを算出しておく
+differenceMilliseconds = (new Date()).getTime() - facade.network.datetimeConverter.epoch.getTime();
+networkTimestamp = new sdkSymbol.NetworkTimestamp(Math.trunc(differenceMilliseconds / facade.network.datetimeConverter.timeUnits))
 
 subNamespaceTx = facade.transactionFactory.create({
   type: 'namespace_registration_transaction_v1',      // Txタイプ:ネームスペース登録Tx
   signerPublicKey: aliceKey.publicKey,  // 署名者公開鍵
-  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
-  duration: new symbolSdk.symbol.BlockDuration(86400n), // duration:有効期限
+//  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+  deadline: networkTimestamp.addHours(2).timestamp, //Deadline:有効期限
+  duration: new sdkSymbol.models.BlockDuration(86400n), // duration:有効期限
   parentId: parentNameId,
-  registrationType: symbolSdk.symbol.NamespaceRegistrationType.CHILD,
+  registrationType: sdkSymbol.models.NamespaceRegistrationType.CHILD,
   name: (new TextEncoder('utf-8')).encode(name)
 });
-subNamespaceTx.fee = new symbolSdk.symbol.Amount(BigInt(subNamespaceTx.size * 100)); //手数料
+subNamespaceTx.fee = new sdkSymbol.models.Amount(BigInt(subNamespaceTx.size * 100)); //手数料
 
 // 署名とアナウンス
 sig = facade.signTransaction(aliceKey, subNamespaceTx);
@@ -200,8 +214,8 @@ subNamespaceTx = sym.NamespaceRegistrationTransaction.createSubNamespace(
 
 ```js
 // ネームスペース設定
-rootNameId = symbolSdk.symbol.generateNamespaceId("xembook"); // ルートネームスペース
-parentNameId = symbolSdk.symbol.generateNamespaceId("tomato", rootNameId);  // 紐づけたい1階層目のサブネームスペース
+rootNameId = sdkSymbol.generateNamespaceId("xembook"); // ルートネームスペース
+parentNameId = sdkSymbol.generateNamespaceId("tomato", rootNameId);  // 紐づけたい1階層目のサブネームスペース
 name = "morning";  // 作成するサブネームスペース
 
 // 以下はサブネームスペース作成と同じ
@@ -231,7 +245,7 @@ console.log(endDate);
 #### v3
 
 ```js
-namespaceIds = symbolSdk.symbol.generateNamespacePath("xembook"); // ルートネームスペース
+namespaceIds = sdkSymbol.generateNamespacePath("xembook"); // ルートネームスペース
 namespaceId = namespaceIds[namespaceIds.length - 1];
 
 nsInfo = await fetch(
@@ -307,19 +321,26 @@ await txRepo.announce(signedTx).toPromise();
 
 ```js
 // リンクするネームスペースとアドレスの設定
-namespaceId = symbolSdk.symbol.generateNamespaceId("xembook");
-address = new symbolSdk.symbol.Address("TBIL6D6RURP45YQRWV6Q7YVWIIPLQGLZQFHWFEQ");
+namespaceId = sdkSymbol.generateNamespaceId("xembook");
+address = new sdkSymbol.Address("TBIL6D6RURP45YQRWV6Q7YVWIIPLQGLZQFHWFEQ");
+
+// v3.2.0 暫定対応（コミットf183132で修正されてるはず）
+// v3.2.0 では、facade.network.fromDatetime()でネットワークのタイムスタンプを取得すると、内部処理でオーバーフローしてエラーとなってしまう
+// このため、事前にネットワークのタイムスタンプを算出しておく
+differenceMilliseconds = (new Date()).getTime() - facade.network.datetimeConverter.epoch.getTime();
+networkTimestamp = new sdkSymbol.NetworkTimestamp(Math.trunc(differenceMilliseconds / facade.network.datetimeConverter.timeUnits))
 
 // Tx作成
 tx = facade.transactionFactory.create({
   type: 'address_alias_transaction_v1', // Txタイプ:アドレスエイリアスTx
   signerPublicKey: aliceKey.publicKey,  // 署名者公開鍵
-  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+//  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+  deadline: networkTimestamp.addHours(2).timestamp, //Deadline:有効期限
   namespaceId: namespaceId,
   address: address,
-  aliasAction: symbolSdk.symbol.AliasAction.LINK
+  aliasAction: sdkSymbol.models.AliasAction.LINK
 });
-tx.fee = new symbolSdk.symbol.Amount(BigInt(tx.size * 100)); //手数料
+tx.fee = new sdkSymbol.models.Amount(BigInt(tx.size * 100)); //手数料
 
 // 署名とアナウンス
 sig = facade.signTransaction(aliceKey, tx);
@@ -362,20 +383,27 @@ await txRepo.announce(signedTx).toPromise();
 
 ```js
 // リンクするネームスペースとモザイクの設定
-namespaceIds = symbolSdk.symbol.generateNamespacePath("xembook.tomato");
+namespaceIds = sdkSymbol.generateNamespacePath("xembook.tomato");
 namespaceId = namespaceIds[namespaceIds.length - 1];
-mosaicId = new symbolSdk.symbol.MosaicId(0x3A8416DB2D53xxxxn);
+mosaicId = new sdkSymbol.models.MosaicId(0x3A8416DB2D53xxxxn);
+
+// v3.2.0 暫定対応（コミットf183132で修正されてるはず）
+// v3.2.0 では、facade.network.fromDatetime()でネットワークのタイムスタンプを取得すると、内部処理でオーバーフローしてエラーとなってしまう
+// このため、事前にネットワークのタイムスタンプを算出しておく
+differenceMilliseconds = (new Date()).getTime() - facade.network.datetimeConverter.epoch.getTime();
+networkTimestamp = new sdkSymbol.NetworkTimestamp(Math.trunc(differenceMilliseconds / facade.network.datetimeConverter.timeUnits))
 
 // Tx作成
 tx = facade.transactionFactory.create({
   type: 'mosaic_alias_transaction_v1',  // Txタイプ:モザイクエイリアスTx
   signerPublicKey: aliceKey.publicKey,  // 署名者公開鍵
-  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+//  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+  deadline: networkTimestamp.addHours(2).timestamp, //Deadline:有効期限
   namespaceId: namespaceId,
   mosaicId: mosaicId,
-  aliasAction: symbolSdk.symbol.AliasAction.LINK
+  aliasAction: sdkSymbol.models.AliasAction.LINK
 });
-tx.fee = new symbolSdk.symbol.Amount(BigInt(tx.size * 100)); //手数料
+tx.fee = new sdkSymbol.models.Amount(BigInt(tx.size * 100)); //手数料
 
 // 署名とアナウンス
 sig = facade.signTransaction(aliceKey, tx);
@@ -423,21 +451,28 @@ v3 ではネームスペースを直接指定できないため、アドレス�
 
 ```js
 // UnresolvedAccount 導出
-namespaceId = symbolSdk.symbol.generateNamespaceId("xembook");
-namespaceIdData = symbolSdk.utils.hexToUint8(namespaceId.toString(16));
+namespaceId = sdkSymbol.generateNamespaceId("xembook");
+namespaceIdData = sdkCore.utils.hexToUint8(namespaceId.toString(16));
 namespaceIdData.reverse();
 unresolvecAccount = new Uint8Array([networkType + 1, ...namespaceIdData, ...(new Uint8Array(24 - (namespaceIdData.length + 1)))]);
+
+// v3.2.0 暫定対応（コミットf183132で修正されてるはず）
+// v3.2.0 では、facade.network.fromDatetime()でネットワークのタイムスタンプを取得すると、内部処理でオーバーフローしてエラーとなってしまう
+// このため、事前にネットワークのタイムスタンプを算出しておく
+differenceMilliseconds = (new Date()).getTime() - facade.network.datetimeConverter.epoch.getTime();
+networkTimestamp = new sdkSymbol.NetworkTimestamp(Math.trunc(differenceMilliseconds / facade.network.datetimeConverter.timeUnits))
 
 // Tx作成
 tx = facade.transactionFactory.create({
   type: 'transfer_transaction_v1',      // Txタイプ:転送Tx
   signerPublicKey: aliceKey.publicKey,  // 署名者公開鍵
-  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+//  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+  deadline: networkTimestamp.addHours(2).timestamp, //Deadline:有効期限
   recipientAddress: unresolvecAccount,  // UnresolvedAccount:未解決アカウントアドレス
   mosaics: [],
   message: new Uint8Array()
 });
-tx.fee = new symbolSdk.symbol.Amount(BigInt(tx.size * 100)); //手数料
+tx.fee = new sdkSymbol.models.Amount(BigInt(tx.size * 100)); //手数料
 
 // 署名とアナウンス
 sig = facade.signTransaction(aliceKey, tx);
@@ -481,15 +516,22 @@ await txRepo.announce(signedTx).toPromise();
 #### v3
 
 ```js
-// address = new symbolSdk.symbol.Address("*****");
-namespaceIds = symbolSdk.symbol.generateNamespacePath("xembook.tomato");
+// address = new sdkSymbol.Address("*****");
+namespaceIds = sdkSymbol.generateNamespacePath("xembook.tomato");
 namespaceId = namespaceIds[namespaceIds.length - 1];
+
+// v3.2.0 暫定対応（コミットf183132で修正されてるはず）
+// v3.2.0 では、facade.network.fromDatetime()でネットワークのタイムスタンプを取得すると、内部処理でオーバーフローしてエラーとなってしまう
+// このため、事前にネットワークのタイムスタンプを算出しておく
+differenceMilliseconds = (new Date()).getTime() - facade.network.datetimeConverter.epoch.getTime();
+networkTimestamp = new sdkSymbol.NetworkTimestamp(Math.trunc(differenceMilliseconds / facade.network.datetimeConverter.timeUnits))
 
 // Tx作成
 tx = facade.transactionFactory.create({
   type: 'transfer_transaction_v1',      // Txタイプ:転送Tx
   signerPublicKey: aliceKey.publicKey,  // 署名者公開鍵
-  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+//  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+  deadline: networkTimestamp.addHours(2).timestamp, //Deadline:有効期限
   recipientAddress: address,
   mosaics: [
     {
@@ -499,7 +541,7 @@ tx = facade.transactionFactory.create({
   ],
   message: new Uint8Array()
 });
-tx.fee = new symbolSdk.symbol.Amount(BigInt(tx.size * 100)); // 手数料
+tx.fee = new sdkSymbol.models.Amount(BigInt(tx.size * 100)); // 手数料
 
 // 署名とアナウンス
 sig = facade.signTransaction(aliceKey, tx);
@@ -536,7 +578,7 @@ Idは内部ではUint64と呼ばれる数値 `{lower: 1106554862, higher: 388049
 #### v3
 
 ```js
-namespaceIds = symbolSdk.symbol.generateNamespacePath("symbol.xym");
+namespaceIds = sdkSymbol.generateNamespacePath("symbol.xym");
 namespaceId = namespaceIds[namespaceIds.length - 1];
 ```
 ```js
@@ -576,7 +618,7 @@ NamespaceInfo
 #### v3
 
 ```js
-nameId = symbolSdk.symbol.generateNamespaceId("xembook");
+nameId = sdkSymbol.generateNamespaceId("xembook");
 namespaceInfo = await fetch(
   new URL('/namespaces/' + nameId.toString(16).toUpperCase(), NODE),
   {
@@ -653,7 +695,7 @@ NamespaceInfo
 #### v3
 
 ```js
-namespaceIds = symbolSdk.symbol.generateNamespacePath("xembook.tomato");
+namespaceIds = sdkSymbol.generateNamespacePath("xembook.tomato");
 nameId = namespaceIds[namespaceIds.length - 1];
 namespaceInfo = await fetch(
   new URL('/namespaces/' + nameId.toString(16).toUpperCase(), NODE),

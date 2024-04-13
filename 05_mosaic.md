@@ -35,25 +35,25 @@ mosaicDefTx = sym.MosaicDefinitionTransaction.create(
 
 ```js
 // モザイクフラグ設定
-f = symbolSdk.symbol.MosaicFlags.NONE.value;
-f += symbolSdk.symbol.MosaicFlags.SUPPLY_MUTABLE.value; // 供給量変更の可否
-// f += symbolSdk.symbol.MosaicFlags.TRANSFERABLE.value;   // 第三者への譲渡可否
-f += symbolSdk.symbol.MosaicFlags.RESTRICTABLE.value;   // 制限設定の可否
-f += symbolSdk.symbol.MosaicFlags.REVOKABLE.value;      // 発行者からの還収可否
-flags = new symbolSdk.symbol.MosaicFlags(f);
+f = sdkSymbol.models.MosaicFlags.NONE.value;
+f += sdkSymbol.models.MosaicFlags.SUPPLY_MUTABLE.value; // 供給量変更の可否
+// f += sdkSymbol.models.MosaicFlags.TRANSFERABLE.value;   // 第三者への譲渡可否
+f += sdkSymbol.models.MosaicFlags.RESTRICTABLE.value;   // 制限設定の可否
+f += sdkSymbol.models.MosaicFlags.REVOKABLE.value;      // 発行者からの還収可否
+flags = new sdkSymbol.models.MosaicFlags(f);
 
 // ナンス設定
-array = new Uint8Array(symbolSdk.symbol.MosaicNonce.SIZE);
+array = new Uint8Array(sdkSymbol.models.MosaicNonce.SIZE);
 crypto.getRandomValues(array);
-nonce = new symbolSdk.symbol.MosaicNonce(array[0] * 0x00000001 + array[1] * 0x00000100 + array[2] * 0x00010000 + array[3] * 0x01000000);
+nonce = new sdkSymbol.models.MosaicNonce(array[0] * 0x00000001 + array[1] * 0x00000100 + array[2] * 0x00010000 + array[3] * 0x01000000);
 
 //モザイク定義
 mosaicDefTx = facade.transactionFactory.createEmbedded({
   type: 'mosaic_definition_transaction_v1',         // Txタイプ:モザイク定義Tx
   signerPublicKey: aliceKey.publicKey,              // 署名者公開鍵
-  id: new symbolSdk.symbol.MosaicId(symbolSdk.symbol.generateMosaicId(aliceAddress, nonce.value)),
+  id: new sdkSymbol.models.MosaicId(sdkSymbol.generateMosaicId(aliceAddress, nonce.value)),
   divisibility: 2,                                  // divisibility:可分性
-  duration: new symbolSdk.symbol.BlockDuration(0n), // duration:有効期限
+  duration: new sdkSymbol.models.BlockDuration(0n), // duration:有効期限
   nonce: nonce,
   flags: flags
 });
@@ -106,9 +106,9 @@ mosaicChangeTx = sym.MosaicSupplyChangeTransaction.create(
 mosaicChangeTx = facade.transactionFactory.createEmbedded({
   type: 'mosaic_supply_change_transaction_v1',  // Txタイプ:モザイク変更Tx
   signerPublicKey: aliceKey.publicKey,          // 署名者公開鍵
-  mosaicId: new symbolSdk.symbol.UnresolvedMosaicId(mosaicDefTx.id.value),
-  delta: new symbolSdk.symbol.Amount(10000n),   // 数量
-  action: symbolSdk.symbol.MosaicSupplyChangeAction.INCREASE
+  mosaicId: new sdkSymbol.models.UnresolvedMosaicId(mosaicDefTx.id.value),
+  delta: new sdkSymbol.models.Amount(10000n),   // 数量
+  action: sdkSymbol.models.MosaicSupplyChangeAction.INCREASE
 });
 ```
 
@@ -149,11 +149,18 @@ embeddedTransactions = [
 ];
 merkleHash = facade.constructor.hashEmbeddedTransactions(embeddedTransactions);
 
+// v3.2.0 暫定対応（コミットf183132で修正されてるはず）
+// v3.2.0 では、facade.network.fromDatetime()でネットワークのタイムスタンプを取得すると、内部処理でオーバーフローしてエラーとなってしまう
+// このため、事前にネットワークのタイムスタンプを算出しておく
+differenceMilliseconds = (new Date()).getTime() - facade.network.datetimeConverter.epoch.getTime();
+networkTimestamp = new sdkSymbol.NetworkTimestamp(Math.trunc(differenceMilliseconds / facade.network.datetimeConverter.timeUnits))
+
 // アグリゲートTx作成
 aggregateTx = facade.transactionFactory.create({
   type: 'aggregate_complete_transaction_v2',
   signerPublicKey: aliceKey.publicKey,  // 署名者公開鍵
-  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+//  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+  deadline: networkTimestamp.addHours(2).timestamp, //Deadline:有効期限
   transactionsHash: merkleHash,
   transactions: embeddedTransactions
 });
@@ -163,7 +170,7 @@ requiredCosignatures = 0; // 必要な連署者の数を指定
 calculatedCosignatures = requiredCosignatures > aggregateTx.cosignatures.length ? requiredCosignatures : aggregateTx.cosignatures.length;
 sizePerCosignature = 8 + 32 + 64;
 calculatedSize = aggregateTx.size - aggregateTx.cosignatures.length * sizePerCosignature + calculatedCosignatures * sizePerCosignature;
-aggregateTx.fee = new symbolSdk.symbol.Amount(BigInt(calculatedSize * 100)); //手数料
+aggregateTx.fee = new sdkSymbol.models.Amount(BigInt(calculatedSize * 100)); //手数料
 
 // 署名とアナウンス
 sig = facade.signTransaction(aliceKey, aggregateTx);
@@ -297,14 +304,21 @@ await txRepo.announce(signedTx).toPromise();
 
 ```js
 //受信アカウント作成
-bobKey = new symbolSdk.symbol.KeyPair(symbolSdk.PrivateKey.random());
+bobKey = new sdkSymbol.KeyPair(sdkCore.PrivateKey.random());
 bobAddress = facade.network.publicKeyToAddress(bobKey.publicKey);
+
+// v3.2.0 暫定対応（コミットf183132で修正されてるはず）
+// v3.2.0 では、facade.network.fromDatetime()でネットワークのタイムスタンプを取得すると、内部処理でオーバーフローしてエラーとなってしまう
+// このため、事前にネットワークのタイムスタンプを算出しておく
+differenceMilliseconds = (new Date()).getTime() - facade.network.datetimeConverter.epoch.getTime();
+networkTimestamp = new sdkSymbol.NetworkTimestamp(Math.trunc(differenceMilliseconds / facade.network.datetimeConverter.timeUnits))
 
 // Tx作成
 tx = facade.transactionFactory.create({
   type: 'transfer_transaction_v1',      // Txタイプ:転送Tx
   signerPublicKey: aliceKey.publicKey,  // 署名者公開鍵
-  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+//  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+  deadline: networkTimestamp.addHours(2).timestamp, //Deadline:有効期限
   recipientAddress: bobAddress.toString(),
   mosaics: [
     { mosaicId: 0x72C0212E67A08BCEn, amount: 1000000n },  // 1XYM送金
@@ -312,7 +326,7 @@ tx = facade.transactionFactory.create({
   ],
   message: new Uint8Array()
 });
-tx.fee = new symbolSdk.symbol.Amount(BigInt(tx.size * 100)); //手数料
+tx.fee = new sdkSymbol.models.Amount(BigInt(tx.size * 100)); //手数料
 
 // 署名とアナウンス
 sig = facade.signTransaction(aliceKey, tx);
@@ -494,25 +508,25 @@ aggregateTx = sym.AggregateTransaction.createComplete(
 
 ```js
 // モザイクフラグ設定
-f = symbolSdk.symbol.MosaicFlags.NONE.value;
-// f += symbolSdk.symbol.MosaicFlags.SUPPLY_MUTABLE.value; // 供給量変更の可否
-f += symbolSdk.symbol.MosaicFlags.TRANSFERABLE.value;   // 第三者への譲渡可否
-f += symbolSdk.symbol.MosaicFlags.RESTRICTABLE.value;   // 制限設定の可否
-f += symbolSdk.symbol.MosaicFlags.REVOKABLE.value;      // 発行者からの還収可否
-flags = new symbolSdk.symbol.MosaicFlags(f);
+f = sdkSymbol.models.MosaicFlags.NONE.value;
+// f += sdkSymbol.models.MosaicFlags.SUPPLY_MUTABLE.value; // 供給量変更の可否
+f += sdkSymbol.models.MosaicFlags.TRANSFERABLE.value;   // 第三者への譲渡可否
+f += sdkSymbol.models.MosaicFlags.RESTRICTABLE.value;   // 制限設定の可否
+f += sdkSymbol.models.MosaicFlags.REVOKABLE.value;      // 発行者からの還収可否
+flags = new sdkSymbol.models.MosaicFlags(f);
 
 // ナンス設定
-array = new Uint8Array(symbolSdk.symbol.MosaicNonce.SIZE);
+array = new Uint8Array(sdkSymbol.models.MosaicNonce.SIZE);
 crypto.getRandomValues(array);
-nonce = new symbolSdk.symbol.MosaicNonce(array[0] * 0x00000001 + array[1] * 0x00000100 + array[2] * 0x00010000 + array[3] * 0x01000000);
+nonce = new sdkSymbol.models.MosaicNonce(array[0] * 0x00000001 + array[1] * 0x00000100 + array[2] * 0x00010000 + array[3] * 0x01000000);
 
 //モザイク定義
 mosaicDefTx = facade.transactionFactory.createEmbedded({
   type: 'mosaic_definition_transaction_v1',         // Txタイプ:モザイク定義Tx
   signerPublicKey: aliceKey.publicKey,              // 署名者公開鍵
-  id: new symbolSdk.symbol.MosaicId(symbolSdk.symbol.generateMosaicId(aliceAddress, nonce.value)),
+  id: new sdkSymbol.models.MosaicId(sdkSymbol.generateMosaicId(aliceAddress, nonce.value)),
   divisibility: 0,                                  // divisibility:可分性
-  duration: new symbolSdk.symbol.BlockDuration(0n), // duration:有効期限
+  duration: new sdkSymbol.models.BlockDuration(0n), // duration:有効期限
   nonce: nonce,
   flags: flags
 });
@@ -521,9 +535,9 @@ mosaicDefTx = facade.transactionFactory.createEmbedded({
 mosaicChangeTx = facade.transactionFactory.createEmbedded({
   type: 'mosaic_supply_change_transaction_v1',  // Txタイプ:モザイク変更Tx
   signerPublicKey: aliceKey.publicKey,          // 署名者公開鍵
-  mosaicId: new symbolSdk.symbol.UnresolvedMosaicId(mosaicDefTx.id.value),
-  delta: new symbolSdk.symbol.Amount(1n),       // 数量
-  action: symbolSdk.symbol.MosaicSupplyChangeAction.INCREASE
+  mosaicId: new sdkSymbol.models.UnresolvedMosaicId(mosaicDefTx.id.value),
+  delta: new sdkSymbol.models.Amount(1n),       // 数量
+  action: sdkSymbol.models.MosaicSupplyChangeAction.INCREASE
 });
 
 // NFTデータ
@@ -542,11 +556,18 @@ embeddedTransactions = [
 ];
 merkleHash = facade.constructor.hashEmbeddedTransactions(embeddedTransactions);
 
+// v3.2.0 暫定対応（コミットf183132で修正されてるはず）
+// v3.2.0 では、facade.network.fromDatetime()でネットワークのタイムスタンプを取得すると、内部処理でオーバーフローしてエラーとなってしまう
+// このため、事前にネットワークのタイムスタンプを算出しておく
+differenceMilliseconds = (new Date()).getTime() - facade.network.datetimeConverter.epoch.getTime();
+networkTimestamp = new sdkSymbol.NetworkTimestamp(Math.trunc(differenceMilliseconds / facade.network.datetimeConverter.timeUnits))
+
 // モザイクの生成とNFTデータをアグリゲートしてブロックに登録
 aggregateTx = facade.transactionFactory.create({
   type: 'aggregate_complete_transaction_v2',
   signerPublicKey: aliceKey.publicKey,
-  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+//  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+  deadline: networkTimestamp.addHours(2).timestamp, //Deadline:有効期限
   transactionsHash: merkleHash,
   transactions: embeddedTransactions
 });
@@ -556,7 +577,7 @@ requiredCosignatures = 0; // 必要な連署者の数を指定
 calculatedCosignatures = requiredCosignatures > aggregateTx.cosignatures.length ? requiredCosignatures : aggregateTx.cosignatures.length;
 sizePerCosignature = 8 + 32 + 64;
 calculatedSize = aggregateTx.size - aggregateTx.cosignatures.length * sizePerCosignature + calculatedCosignatures * sizePerCosignature;
-aggregateTx.fee = new symbolSdk.symbol.Amount(BigInt(calculatedSize * 100)); //手数料
+aggregateTx.fee = new sdkSymbol.models.Amount(BigInt(calculatedSize * 100)); //手数料
 ```
 
 モザイク生成時のブロック高と作成アカウントがモザイク情報に含まれているので同ブロック内のトランザクションを検索することにより、
@@ -584,12 +605,12 @@ revokable = true; //発行者からの還収可否
 
 ```js
 // モザイクフラグ設定
-f = symbolSdk.symbol.MosaicFlags.NONE.value;
-f += symbolSdk.symbol.MosaicFlags.SUPPLY_MUTABLE.value; // 供給量変更の可否
-// f += symbolSdk.symbol.MosaicFlags.TRANSFERABLE.value;   // 第三者への譲渡可否
-f += symbolSdk.symbol.MosaicFlags.RESTRICTABLE.value;   // 制限設定の可否
-f += symbolSdk.symbol.MosaicFlags.REVOKABLE.value;      // 発行者からの還収可否
-flags = new symbolSdk.symbol.MosaicFlags(f);
+f = sdkSymbol.models.MosaicFlags.NONE.value;
+f += sdkSymbol.models.MosaicFlags.SUPPLY_MUTABLE.value; // 供給量変更の可否
+// f += sdkSymbol.models.MosaicFlags.TRANSFERABLE.value;   // 第三者への譲渡可否
+f += sdkSymbol.models.MosaicFlags.RESTRICTABLE.value;   // 制限設定の可否
+f += sdkSymbol.models.MosaicFlags.REVOKABLE.value;      // 発行者からの還収可否
+flags = new sdkSymbol.models.MosaicFlags(f);
 ```
 
 トランザクションは以下のように記述します。
@@ -608,14 +629,21 @@ revocationTx = sym.MosaicSupplyRevocationTransaction.create(
 #### v3
 
 ```js
+// v3.2.0 暫定対応（コミットf183132で修正されてるはず）
+// v3.2.0 では、facade.network.fromDatetime()でネットワークのタイムスタンプを取得すると、内部処理でオーバーフローしてエラーとなってしまう
+// このため、事前にネットワークのタイムスタンプを算出しておく
+differenceMilliseconds = (new Date()).getTime() - facade.network.datetimeConverter.epoch.getTime();
+networkTimestamp = new sdkSymbol.NetworkTimestamp(Math.trunc(differenceMilliseconds / facade.network.datetimeConverter.timeUnits))
+
 revocationTx = facade.transactionFactory.create({
   type: 'mosaic_supply_revocation_transaction_v1',  // Txタイプ:モザイク回収Tx
   signerPublicKey: aliceKey.publicKey,              // 署名者公開鍵
-  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+//  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+  deadline: networkTimestamp.addHours(2).timestamp, //Deadline:有効期限
   mosaic: { mosaicId: mosaicId, amount: 1n },       // 回収モザイクIDと数量
   sourceAddress: bobAddress
 });
-revocationTx.fee = new symbolSdk.symbol.Amount(BigInt(revocationTx.size * 100)); //手数料
+revocationTx.fee = new sdkSymbol.models.Amount(BigInt(revocationTx.size * 100)); //手数料
 ```
 
 

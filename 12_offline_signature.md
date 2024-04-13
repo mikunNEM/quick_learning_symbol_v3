@@ -54,7 +54,7 @@ console.log(signedPayload);
 #### v3
 
 ```js
-bobKey = new symbolSdk.symbol.KeyPair(symbolSdk.PrivateKey.random());
+bobKey = new sdkSymbol.KeyPair(sdkCore.PrivateKey.random());
 bobAddress = facade.network.publicKeyToAddress(bobKey.publicKey);
 
 // アグリゲートTxに含めるTxを作成
@@ -81,11 +81,18 @@ embeddedTransactions = [
 ];
 merkleHash = facade.constructor.hashEmbeddedTransactions(embeddedTransactions);
 
+// v3.2.0 暫定対応（コミットf183132で修正されてるはず）
+// v3.2.0 では、facade.network.fromDatetime()でネットワークのタイムスタンプを取得すると、内部処理でオーバーフローしてエラーとなってしまう
+// このため、事前にネットワークのタイムスタンプを算出しておく
+differenceMilliseconds = (new Date()).getTime() - facade.network.datetimeConverter.epoch.getTime();
+networkTimestamp = new sdkSymbol.NetworkTimestamp(Math.trunc(differenceMilliseconds / facade.network.datetimeConverter.timeUnits))
+
 // アグリゲートTx作成
 aggregateTx = facade.transactionFactory.create({
   type: 'aggregate_complete_transaction_v2',
   signerPublicKey: aliceKey.publicKey,  // 署名者公開鍵
-  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+//  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+  deadline: networkTimestamp.addHours(2).timestamp, //Deadline:有効期限
   transactionsHash: merkleHash,
   transactions: embeddedTransactions
 });
@@ -95,7 +102,7 @@ requiredCosignatures = 1; // 必要な連署者の数を指定
 calculatedCosignatures = requiredCosignatures > aggregateTx.cosignatures.length ? requiredCosignatures : aggregateTx.cosignatures.length;
 sizePerCosignature = 8 + 32 + 64;
 calculatedSize = aggregateTx.size - aggregateTx.cosignatures.length * sizePerCosignature + calculatedCosignatures * sizePerCosignature;
-aggregateTx.fee = new symbolSdk.symbol.Amount(BigInt(calculatedSize * 100)); //手数料
+aggregateTx.fee = new sdkSymbol.models.Amount(BigInt(calculatedSize * 100)); //手数料
 
 // 署名
 sig = facade.signTransaction(aliceKey, aggregateTx);
@@ -149,7 +156,7 @@ console.log(tx);
 #### v3
 
 ```js
-tx = symbolSdk.symbol.TransactionFactory.deserialize(symbolSdk.utils.hexToUint8(JSON.parse(jsonPayload).payload))
+tx = sdkSymbol.models.TransactionFactory.deserialize(sdkCore.utils.hexToUint8(JSON.parse(jsonPayload).payload))
 console.log(tx);
 ```
 ###### 出力例
@@ -260,10 +267,10 @@ await txRepo.announce(resignedTx).toPromise();
 #### v3
 
 ```js
-recreatedTx = symbolSdk.symbol.TransactionFactory.deserialize(symbolSdk.utils.hexToUint8(JSON.parse(jsonPayload).payload));
+recreatedTx = sdkSymbol.models.TransactionFactory.deserialize(sdkCore.utils.hexToUint8(JSON.parse(jsonPayload).payload));
 
 // 連署者の署名を追加
-cosignature = new symbolSdk.symbol.Cosignature();
+cosignature = new sdkSymbol.models.Cosignature();
 signTxHash = facade.hashTransaction(aggregateTx);
 cosignature.parentHash = signTxHash;
 cosignature.version = 0n;
@@ -271,7 +278,7 @@ cosignature.signerPublicKey = bobSignedTxSignerPublicKey;
 cosignature.signature = bobSignedTxSignature;
 recreatedTx.cosignatures.push(cosignature);
 
-signedPayload = symbolSdk.utils.uint8ToHex(recreatedTx.serialize());
+signedPayload = sdkCore.utils.uint8ToHex(recreatedTx.serialize());
 
 // アナウンス
 await fetch(

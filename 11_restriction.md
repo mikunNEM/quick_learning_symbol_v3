@@ -18,7 +18,7 @@ console.log("https://testnet.symbol.tools/?recipient=" + carol.address.plain() +
 
 ```js
 // 使い捨てアカウントCarolの生成
-carolKey = new symbolSdk.symbol.KeyPair(symbolSdk.PrivateKey.random());
+carolKey = new sdkSymbol.KeyPair(sdkCore.PrivateKey.random());
 carolAddress = facade.network.publicKeyToAddress(carolKey.publicKey);
 console.log(carolAddress.toString());
 
@@ -61,26 +61,33 @@ AddressRestrictionFlagにはBlockIncomingAddressのほか、上記のような�
 #### v3
 
 ```js
-bobKey = new symbolSdk.symbol.KeyPair(symbolSdk.PrivateKey.random());
+bobKey = new sdkSymbol.KeyPair(sdkCore.PrivateKey.random());
 bobAddress = facade.network.publicKeyToAddress(bobKey.publicKey);
 
 // 制限設定
-f = symbolSdk.symbol.AccountRestrictionFlags.ADDRESS.value; // アドレス制限
-f += symbolSdk.symbol.AccountRestrictionFlags.BLOCK.value; // ブロック
-flags = new symbolSdk.symbol.AccountRestrictionFlags(f);
+f = sdkSymbol.models.AccountRestrictionFlags.ADDRESS.value; // アドレス制限
+f += sdkSymbol.models.AccountRestrictionFlags.BLOCK.value; // ブロック
+flags = new sdkSymbol.models.AccountRestrictionFlags(f);
+
+// v3.2.0 暫定対応（コミットf183132で修正されてるはず）
+// v3.2.0 では、facade.network.fromDatetime()でネットワークのタイムスタンプを取得すると、内部処理でオーバーフローしてエラーとなってしまう
+// このため、事前にネットワークのタイムスタンプを算出しておく
+differenceMilliseconds = (new Date()).getTime() - facade.network.datetimeConverter.epoch.getTime();
+networkTimestamp = new sdkSymbol.NetworkTimestamp(Math.trunc(differenceMilliseconds / facade.network.datetimeConverter.timeUnits))
 
 // アドレス制限設定Tx作成
 tx = facade.transactionFactory.create({
   type: 'account_address_restriction_transaction_v1', // Txタイプ:アドレス制限設定Tx
   signerPublicKey: carolKey.publicKey,                // 署名者公開鍵
-  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+//  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+  deadline: networkTimestamp.addHours(2).timestamp, //Deadline:有効期限
   restrictionFlags: flags,  // アドレス制限フラグ
   restrictionAdditions: [   // 設定アドレス
     bobAddress,
   ],
   restrictionDeletions: []  // 解除アドレス
 });
-tx.fee = new symbolSdk.symbol.Amount(BigInt(tx.size * 100)); // 手数料
+tx.fee = new sdkSymbol.models.Amount(BigInt(tx.size * 100)); // 手数料
 
 // 署名
 sig = facade.signTransaction(carolKey, tx);
@@ -105,13 +112,13 @@ await fetch(
 `AddressRestrictionFlag` との対応は以下の通りです。
 
 - AllowIncomingAddress：指定アドレスからのみ受信許可
-  - symbolSdk.symbol.AccountRestrictionFlags.ADDRESS
+  - sdkSymbol.models.AccountRestrictionFlags.ADDRESS
 - AllowOutgoingAddress：指定アドレス宛のみ送信許可
-  - symbolSdk.symbol.AccountRestrictionFlags.ADDRESS + symbolSdk.symbol.AccountRestrictionFlags.OUTGOING
+  - sdkSymbol.models.AccountRestrictionFlags.ADDRESS + sdkSymbol.models.AccountRestrictionFlags.OUTGOING
 - BlockIncomingAddress：指定アドレスからの受信受拒否
-  - symbolSdk.symbol.AccountRestrictionFlags.ADDRESS + symbolSdk.symbol.AccountRestrictionFlags.BLOCK
+  - sdkSymbol.models.AccountRestrictionFlags.ADDRESS + sdkSymbol.models.AccountRestrictionFlags.BLOCK
 - BlockOutgoingAddress：指定アドレス宛への送信禁止
-  - symbolSdk.symbol.AccountRestrictionFlags.ADDRESS + symbolSdk.symbol.AccountRestrictionFlags.BLOCK + symbolSdk.symbol.AccountRestrictionFlags.OUTGOING
+  - sdkSymbol.models.AccountRestrictionFlags.ADDRESS + sdkSymbol.models.AccountRestrictionFlags.BLOCK + sdkSymbol.models.AccountRestrictionFlags.OUTGOING
 
 ### 指定モザイクの受信制限
 
@@ -142,22 +149,29 @@ MosaicRestrictionFlagについては以下の通りです。
 
 ```js
 // 制限設定
-f = symbolSdk.symbol.AccountRestrictionFlags.MOSAIC_ID.value; // モザイク制限
-f += symbolSdk.symbol.AccountRestrictionFlags.BLOCK.value;    // ブロック
-flags = new symbolSdk.symbol.AccountRestrictionFlags(f);
+f = sdkSymbol.models.AccountRestrictionFlags.MOSAIC_ID.value; // モザイク制限
+f += sdkSymbol.models.AccountRestrictionFlags.BLOCK.value;    // ブロック
+flags = new sdkSymbol.models.AccountRestrictionFlags(f);
+
+// v3.2.0 暫定対応（コミットf183132で修正されてるはず）
+// v3.2.0 では、facade.network.fromDatetime()でネットワークのタイムスタンプを取得すると、内部処理でオーバーフローしてエラーとなってしまう
+// このため、事前にネットワークのタイムスタンプを算出しておく
+differenceMilliseconds = (new Date()).getTime() - facade.network.datetimeConverter.epoch.getTime();
+networkTimestamp = new sdkSymbol.NetworkTimestamp(Math.trunc(differenceMilliseconds / facade.network.datetimeConverter.timeUnits))
 
 // モザイク制限設定Tx作成
 tx = facade.transactionFactory.create({
   type: 'account_mosaic_restriction_transaction_v1',  // Txタイプ:モザイク制限設定Tx
   signerPublicKey: carolKey.publicKey,                // 署名者公開鍵
-  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+//  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+  deadline: networkTimestamp.addHours(2).timestamp, //Deadline:有効期限
   restrictionFlags: flags,  // モザイク制限フラグ
   restrictionAdditions: [   // 設定モザイク
     0x72C0212E67A08BCEn,
   ],
   restrictionDeletions: []  // 解除モザイク
 });
-tx.fee = new symbolSdk.symbol.Amount(BigInt(tx.size * 100)); // 手数料
+tx.fee = new sdkSymbol.models.Amount(BigInt(tx.size * 100)); // 手数料
 
 // 署名
 sig = facade.signTransaction(carolKey, tx);
@@ -182,9 +196,9 @@ await fetch(
 `MosaicRestrictionFlag` との対応は以下の通りです。
 
 - AllowMosaic：指定モザイクを含むトランザクションのみ受信許可
-  - symbolSdk.symbol.AccountRestrictionFlags.MOSAIC_ID
+  - sdkSymbol.models.AccountRestrictionFlags.MOSAIC_ID
 - BlockMosaic：指定モザイクを含むトランザクションを受信拒否
-  - symbolSdk.symbol.AccountRestrictionFlags.MOSAIC_ID + symbolSdk.symbol.AccountRestrictionFlags.BLOCK
+  - sdkSymbol.models.AccountRestrictionFlags.MOSAIC_ID + sdkSymbol.models.AccountRestrictionFlags.BLOCK
 
 モザイク送信の制限機能はありません。
 また、後述するモザイクのふるまいを制限するグローバルモザイク制限と混同しないようにご注意ください。
@@ -213,28 +227,35 @@ OperationRestrictionFlagについては以下の通りです。
 - AllowOutgoingTransactionType：指定トランザクションの送信のみ許可
 - BlockOutgoingTransactionType：指定トランザクションの送信を禁止
 
-トランザクション受信の制限機能はありません。指定できるオペレーションは以下の通りです。
+トランザクション受信の制限機能はありません。
 
 #### v3
 
 ```js
 // 制限設定
-f = symbolSdk.symbol.AccountRestrictionFlags.TRANSACTION_TYPE.value;  // トランザクション制限
-f += symbolSdk.symbol.AccountRestrictionFlags.OUTGOING.value;         // 送信
-flags = new symbolSdk.symbol.AccountRestrictionFlags(f);
+f = sdkSymbol.models.AccountRestrictionFlags.TRANSACTION_TYPE.value;  // トランザクション制限
+f += sdkSymbol.models.AccountRestrictionFlags.OUTGOING.value;         // 送信
+flags = new sdkSymbol.models.AccountRestrictionFlags(f);
+
+// v3.2.0 暫定対応（コミットf183132で修正されてるはず）
+// v3.2.0 では、facade.network.fromDatetime()でネットワークのタイムスタンプを取得すると、内部処理でオーバーフローしてエラーとなってしまう
+// このため、事前にネットワークのタイムスタンプを算出しておく
+differenceMilliseconds = (new Date()).getTime() - facade.network.datetimeConverter.epoch.getTime();
+networkTimestamp = new sdkSymbol.NetworkTimestamp(Math.trunc(differenceMilliseconds / facade.network.datetimeConverter.timeUnits))
 
 // トランザクション制限設定Tx作成
 tx = facade.transactionFactory.create({
   type: 'account_operation_restriction_transaction_v1', // Txタイプ:トランザクション制限設定Tx
   signerPublicKey: carolKey.publicKey,                  // 署名者公開鍵
-  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+//  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+  deadline: networkTimestamp.addHours(2).timestamp, //Deadline:有効期限
   restrictionFlags: flags,  // トランザクション制限フラグ
   restrictionAdditions: [   // 設定トランザクション
-    symbolSdk.symbol.TransactionType.ACCOUNT_OPERATION_RESTRICTION.value,
+    sdkSymbol.models.TransactionType.ACCOUNT_OPERATION_RESTRICTION.value,
   ],
   restrictionDeletions: []  // 解除トランザクション
 });
-tx.fee = new symbolSdk.symbol.Amount(BigInt(tx.size * 100)); // 手数料
+tx.fee = new sdkSymbol.models.Amount(BigInt(tx.size * 100)); // 手数料
 
 // 署名
 sig = facade.signTransaction(carolKey, tx);
@@ -259,9 +280,9 @@ await fetch(
 `OperationRestrictionFlag` との対応は以下の通りです。
 
 - AllowOutgoingTransactionType：指定トランザクションの送信のみ許可
-  - symbolSdk.symbol.AccountRestrictionFlags.TRANSACTION_TYPE + symbolSdk.symbol.AccountRestrictionFlags.OUTGOING
+  - sdkSymbol.models.AccountRestrictionFlags.TRANSACTION_TYPE + sdkSymbol.models.AccountRestrictionFlags.OUTGOING
 - BlockOutgoingTransactionType：指定トランザクションの送信を禁止
-  - symbolSdk.symbol.AccountRestrictionFlags.TRANSACTION_TYPE + symbolSdk.symbol.AccountRestrictionFlags.OUTGOING + symbolSdk.symbol.AccountRestrictionFlags.BLOCK
+  - sdkSymbol.models.AccountRestrictionFlags.TRANSACTION_TYPE + sdkSymbol.models.AccountRestrictionFlags.OUTGOING + sdkSymbol.models.AccountRestrictionFlags.BLOCK
 
 TransactionTypeについては以下の通りです。
 ```js
@@ -350,15 +371,23 @@ console.log(res);
 その後、各アカウントに対してグローバルモザイク制限専用の数値メタデータを付与します。  
 送信アカウント・受信アカウントの両方が条件を満たした場合のみ、該当モザイクを送信することができます。  
 
-#### v2のみ
-
 最初に必要ライブラリの設定を行います。
+併せて、前項の操作で制限がかかってしまっているため、必要に応じて新しい使い捨てのアカウントを作成してください。
+
+#### v2
+
 ```js
 nsRepo = repo.createNamespaceRepository();
 resMosaicRepo = repo.createRestrictionMosaicRepository();
 mosaicResService = new sym.MosaicRestrictionTransactionService(resMosaicRepo,nsRepo);
 ```
 
+#### v3
+
+```js
+// 必要ライブラリの設定
+sha3_256 = (await import('https://cdn.skypack.dev/@noble/hashes/sha3')).sha3_256;
+```
 
 ### グローバル制限機能つきモザイクの作成
 restrictableをtrueにしてCarolでモザイクを作成します。
@@ -420,25 +449,25 @@ await txRepo.announce(signedTx).toPromise();
 
 ```js
 // モザイクフラグ設定
-f = symbolSdk.symbol.MosaicFlags.NONE.value;
-f += symbolSdk.symbol.MosaicFlags.SUPPLY_MUTABLE.value; // 供給量変更の可否
-f += symbolSdk.symbol.MosaicFlags.TRANSFERABLE.value;   // 第三者への譲渡可否
-f += symbolSdk.symbol.MosaicFlags.RESTRICTABLE.value;   // グローバル制限設定の可否
-f += symbolSdk.symbol.MosaicFlags.REVOKABLE.value;      // 発行者からの還収可否
-flags = new symbolSdk.symbol.MosaicFlags(f);
+f = sdkSymbol.models.MosaicFlags.NONE.value;
+f += sdkSymbol.models.MosaicFlags.SUPPLY_MUTABLE.value; // 供給量変更の可否
+f += sdkSymbol.models.MosaicFlags.TRANSFERABLE.value;   // 第三者への譲渡可否
+f += sdkSymbol.models.MosaicFlags.RESTRICTABLE.value;   // グローバル制限設定の可否
+f += sdkSymbol.models.MosaicFlags.REVOKABLE.value;      // 発行者からの還収可否
+flags = new sdkSymbol.models.MosaicFlags(f);
 
 // ナンス設定
-array = new Uint8Array(symbolSdk.symbol.MosaicNonce.SIZE);
+array = new Uint8Array(sdkSymbol.models.MosaicNonce.SIZE);
 crypto.getRandomValues(array);
-nonce = new symbolSdk.symbol.MosaicNonce(array[0] * 0x00000001 + array[1] * 0x00000100 + array[2] * 0x00010000 + array[3] * 0x01000000);
+nonce = new sdkSymbol.models.MosaicNonce(array[0] * 0x00000001 + array[1] * 0x00000100 + array[2] * 0x00010000 + array[3] * 0x01000000);
 
 // モザイク定義
 mosaicDefTx = facade.transactionFactory.createEmbedded({
   type: 'mosaic_definition_transaction_v1',         // Txタイプ:モザイク定義Tx
   signerPublicKey: carolKey.publicKey,              // 署名者公開鍵
-  id: new symbolSdk.symbol.MosaicId(symbolSdk.symbol.generateMosaicId(carolAddress, nonce.value)),
+  id: new sdkSymbol.models.MosaicId(sdkSymbol.generateMosaicId(carolAddress, nonce.value)),
   divisibility: 0,                                  // divisibility:可分性
-  duration: new symbolSdk.symbol.BlockDuration(0n), // duration:有効期限
+  duration: new sdkSymbol.models.BlockDuration(0n), // duration:有効期限
   nonce: nonce,
   flags: flags
 });
@@ -448,8 +477,8 @@ mosaicChangeTx = facade.transactionFactory.createEmbedded({
   type: 'mosaic_supply_change_transaction_v1',  // Txタイプ:モザイク変更Tx
   signerPublicKey: carolKey.publicKey,          // 署名者公開鍵
   mosaicId: mosaicDefTx.id.value,
-  delta: new symbolSdk.symbol.Amount(1000000n), // 数量
-  action: symbolSdk.symbol.MosaicSupplyChangeAction.INCREASE
+  delta: new sdkSymbol.models.Amount(1000000n), // 数量
+  action: sdkSymbol.models.MosaicSupplyChangeAction.INCREASE
 });
 
 // キーと値の設定
@@ -461,10 +490,10 @@ hasher.update((new TextEncoder()).encode(key));
 digest = hasher.digest();
 lower = [...digest.subarray(0, 4)];
 lower.reverse();
-lowerValue = BigInt("0x" + symbolSdk.utils.uint8ToHex(lower));
+lowerValue = BigInt("0x" + sdkCore.utils.uint8ToHex(lower));
 higher = [...digest.subarray(4, 8)];
 higher.reverse();
-higherValue = BigInt("0x" + symbolSdk.utils.uint8ToHex(higher)) | 0x80000000n;
+higherValue = BigInt("0x" + sdkCore.utils.uint8ToHex(higher)) | 0x80000000n;
 keyId = lowerValue + higherValue * 0x100000000n;
 
 // グローバルモザイク制限
@@ -474,7 +503,7 @@ mosaicGlobalResTx = facade.transactionFactory.createEmbedded({
   mosaicId: mosaicDefTx.id.value,
   restrictionKey: keyId,
   newRestrictionValue: 1n,
-  newRestrictionType: symbolSdk.symbol.MosaicRestrictionType.EQ
+  newRestrictionType: sdkSymbol.models.MosaicRestrictionType.EQ
 });
 // 更新する場合は以下も設定する必要あり
 //   - mosaicGlobalResTx.previousRestrictionValue
@@ -488,11 +517,18 @@ embeddedTransactions = [
 ];
 merkleHash = facade.constructor.hashEmbeddedTransactions(embeddedTransactions);
 
+// v3.2.0 暫定対応（コミットf183132で修正されてるはず）
+// v3.2.0 では、facade.network.fromDatetime()でネットワークのタイムスタンプを取得すると、内部処理でオーバーフローしてエラーとなってしまう
+// このため、事前にネットワークのタイムスタンプを算出しておく
+differenceMilliseconds = (new Date()).getTime() - facade.network.datetimeConverter.epoch.getTime();
+networkTimestamp = new sdkSymbol.NetworkTimestamp(Math.trunc(differenceMilliseconds / facade.network.datetimeConverter.timeUnits))
+
 // アグリゲートTx作成
 aggregateTx = facade.transactionFactory.create({
   type: 'aggregate_complete_transaction_v2',
   signerPublicKey: carolKey.publicKey,  // 署名者公開鍵
-  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+//  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+  deadline: networkTimestamp.addHours(2).timestamp, //Deadline:有効期限
   transactionsHash: merkleHash,
   transactions: embeddedTransactions
 });
@@ -502,7 +538,7 @@ requiredCosignatures = 0; // 必要な連署者の数を指定
 calculatedCosignatures = requiredCosignatures > aggregateTx.cosignatures.length ? requiredCosignatures : aggregateTx.cosignatures.length;
 sizePerCosignature = 8 + 32 + 64;
 calculatedSize = aggregateTx.size - aggregateTx.cosignatures.length * sizePerCosignature + calculatedCosignatures * sizePerCosignature;
-aggregateTx.fee = new symbolSdk.symbol.Amount(BigInt(calculatedSize * 100)); //手数料
+aggregateTx.fee = new sdkSymbol.models.Amount(BigInt(calculatedSize * 100)); //手数料
 
 // 署名とアナウンス
 sig = facade.signTransaction(carolKey, aggregateTx);
@@ -578,18 +614,25 @@ await txRepo.announce(signedTx).toPromise();
 #### v3
 
 ```js
+// v3.2.0 暫定対応（コミットf183132で修正されてるはず）
+// v3.2.0 では、facade.network.fromDatetime()でネットワークのタイムスタンプを取得すると、内部処理でオーバーフローしてエラーとなってしまう
+// このため、事前にネットワークのタイムスタンプを算出しておく
+differenceMilliseconds = (new Date()).getTime() - facade.network.datetimeConverter.epoch.getTime();
+networkTimestamp = new sdkSymbol.NetworkTimestamp(Math.trunc(differenceMilliseconds / facade.network.datetimeConverter.timeUnits))
+
 // Carolに適用
 carolMosaicAddressResTx = facade.transactionFactory.create({
   type: 'mosaic_address_restriction_transaction_v1',  // Txタイプ:モザイク制限適用Tx
   signerPublicKey: carolKey.publicKey,                // 署名者公開鍵
-  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+//  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+  deadline: networkTimestamp.addHours(2).timestamp, //Deadline:有効期限
   mosaicId: mosaicDefTx.id.value,
   restrictionKey: keyId,
   previousRestrictionValue: 0xFFFFFFFFFFFFFFFFn,
   newRestrictionValue: 1n,
   targetAddress: carolAddress
 });
-carolMosaicAddressResTx.fee = new symbolSdk.symbol.Amount(BigInt(carolMosaicAddressResTx.size * 100)); //手数料
+carolMosaicAddressResTx.fee = new sdkSymbol.models.Amount(BigInt(carolMosaicAddressResTx.size * 100)); //手数料
 
 // 署名とアナウンス
 carolSig = facade.signTransaction(carolKey, carolMosaicAddressResTx);
@@ -607,21 +650,28 @@ await fetch(
   return json;
 });
 
-bobKey = new symbolSdk.symbol.KeyPair(symbolSdk.PrivateKey.random());
+bobKey = new sdkSymbol.KeyPair(sdkCore.PrivateKey.random());
 bobAddress = facade.network.publicKeyToAddress(bobKey.publicKey);
+
+// v3.2.0 暫定対応（コミットf183132で修正されてるはず）
+// v3.2.0 では、facade.network.fromDatetime()でネットワークのタイムスタンプを取得すると、内部処理でオーバーフローしてエラーとなってしまう
+// このため、事前にネットワークのタイムスタンプを算出しておく
+differenceMilliseconds = (new Date()).getTime() - facade.network.datetimeConverter.epoch.getTime();
+networkTimestamp = new sdkSymbol.NetworkTimestamp(Math.trunc(differenceMilliseconds / facade.network.datetimeConverter.timeUnits))
 
 // Bobに適用
 bobMosaicAddressResTx = facade.transactionFactory.create({
   type: 'mosaic_address_restriction_transaction_v1',  // Txタイプ:モザイク制限適用Tx
   signerPublicKey: carolKey.publicKey,                // 署名者公開鍵
-  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+//  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+  deadline: networkTimestamp.addHours(2).timestamp, //Deadline:有効期限
   mosaicId: mosaicDefTx.id.value,
   restrictionKey: keyId,
   previousRestrictionValue: 0xFFFFFFFFFFFFFFFFn,
   newRestrictionValue: 1n,
   targetAddress: bobAddress
 });
-bobMosaicAddressResTx.fee = new symbolSdk.symbol.Amount(BigInt(bobMosaicAddressResTx.size * 100)); //手数料
+bobMosaicAddressResTx.fee = new sdkSymbol.models.Amount(BigInt(bobMosaicAddressResTx.size * 100)); //手数料
 
 // 署名とアナウンス
 bobSig = facade.signTransaction(carolKey, bobMosaicAddressResTx);
@@ -768,18 +818,25 @@ await txRepo.announce(signedTx).toPromise();
 #### v3
 
 ```js
+// v3.2.0 暫定対応（コミットf183132で修正されてるはず）
+// v3.2.0 では、facade.network.fromDatetime()でネットワークのタイムスタンプを取得すると、内部処理でオーバーフローしてエラーとなってしまう
+// このため、事前にネットワークのタイムスタンプを算出しておく
+differenceMilliseconds = (new Date()).getTime() - facade.network.datetimeConverter.epoch.getTime();
+networkTimestamp = new sdkSymbol.NetworkTimestamp(Math.trunc(differenceMilliseconds / facade.network.datetimeConverter.timeUnits))
+
 // 成功（CarolからBobに送信）
 trTx = facade.transactionFactory.create({
   type: 'transfer_transaction_v1',      // Txタイプ:転送Tx
   signerPublicKey: carolKey.publicKey,  // 署名者公開鍵
-  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+//  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+  deadline: networkTimestamp.addHours(2).timestamp, //Deadline:有効期限
   recipientAddress: bobAddress.toString(),
   mosaics: [
     { mosaicId: mosaicDefTx.id.value, amount: 1n },
   ],
   message: new Uint8Array()
 });
-trTx.fee = new symbolSdk.symbol.Amount(BigInt(trTx.size * 100)); //手数料
+trTx.fee = new sdkSymbol.models.Amount(BigInt(trTx.size * 100)); //手数料
 // 署名とアナウンス
 sig = facade.signTransaction(carolKey, trTx);
 jsonPayload = facade.transactionFactory.constructor.attachSignature(trTx, sig);
@@ -796,21 +853,28 @@ await fetch(
   return json;
 });
 
+// v3.2.0 暫定対応（コミットf183132で修正されてるはず）
+// v3.2.0 では、facade.network.fromDatetime()でネットワークのタイムスタンプを取得すると、内部処理でオーバーフローしてエラーとなってしまう
+// このため、事前にネットワークのタイムスタンプを算出しておく
+differenceMilliseconds = (new Date()).getTime() - facade.network.datetimeConverter.epoch.getTime();
+networkTimestamp = new sdkSymbol.NetworkTimestamp(Math.trunc(differenceMilliseconds / facade.network.datetimeConverter.timeUnits))
+
 // 失敗（CarolからDaveに送信）
-daveKey = new symbolSdk.symbol.KeyPair(symbolSdk.PrivateKey.random());
+daveKey = new sdkSymbol.KeyPair(sdkCore.PrivateKey.random());
 daveAddress = facade.network.publicKeyToAddress(daveKey.publicKey);
 // Tx作成
 trTx = facade.transactionFactory.create({
   type: 'transfer_transaction_v1',      // Txタイプ:転送Tx
   signerPublicKey: carolKey.publicKey,  // 署名者公開鍵
-  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+//  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+  deadline: networkTimestamp.addHours(2).timestamp, //Deadline:有効期限
   recipientAddress: daveAddress.toString(),
   mosaics: [
     { mosaicId: mosaicDefTx.id.value, amount: 1n },
   ],
   message: new Uint8Array()
 });
-trTx.fee = new symbolSdk.symbol.Amount(BigInt(trTx.size * 100)); //手数料
+trTx.fee = new sdkSymbol.models.Amount(BigInt(trTx.size * 100)); //手数料
 
 // 署名とアナウンス
 sig = facade.signTransaction(carolKey, trTx);
@@ -827,6 +891,9 @@ await fetch(
 .then((json) => {
   return json;
 });
+
+// ステータス確認URL表示
+console.log(NODE + "/transactionStatus/" + facade.hashTransaction(trTx).toString());
 ```
 
 失敗した場合以下のようなエラーステータスになります。

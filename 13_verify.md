@@ -38,6 +38,7 @@ payload = '2802000000000000A5151FD55D82351DD488DB5563DD328DA72B2AD25B513C1D0F7F7
 height = 686312;
 ```
 
+※後の工程で署名者の検証も行うため、前章までに alice や bob で実際に発行したトランザクションペイロードとブロック高を使用してください。
 
 ### payload確認
 
@@ -80,7 +81,7 @@ console.log(tx);
 #### v3
 
 ```js
-tx = symbolSdk.symbol.TransactionFactory.deserialize(symbolSdk.utils.hexToUint8(payload));
+tx = sdkSymbol.models.TransactionFactory.deserialize(sdkCore.utils.hexToUint8(payload));
 hash = facade.hashTransaction(tx);
 console.log(hash);
 console.log(tx);
@@ -172,7 +173,7 @@ if (tx.cosignatures !== undefined && tx.cosignatures.length > 0) {
   for (cosignature of tx.cosignatures){
     hasher.update(cosignature.signerPublicKey.bytes);
   }
-  merkleComponentHash = symbolSdk.utils.uint8ToHex(hasher.digest());
+  merkleComponentHash = sdkCore.utils.uint8ToHex(hasher.digest());
 }
 console.log(merkleComponentHash);
 ```
@@ -223,7 +224,7 @@ console.log(result);
 
 ```js
 //トランザクションから計算
-leaf = new symbolSdk.Hash256(merkleComponentHash);
+leaf = new sdkCore.Hash256(merkleComponentHash);
 
 //ノードから取得
 HRoot = await fetch(
@@ -235,7 +236,7 @@ HRoot = await fetch(
 )
 .then((res) => res.json())
 .then((json) => {
-  return new symbolSdk.Hash256(json.block.transactionsHash);
+  return new sdkCore.Hash256(json.block.transactionsHash);
 });
 merkleProof = await fetch(
   new URL('/blocks/' + height + '/transactions/' + leaf + '/merkle', NODE),
@@ -248,13 +249,13 @@ merkleProof = await fetch(
 .then((json) => {
   let paths = [];
   json.merklePath.forEach(path => paths.push({
-    "hash": new symbolSdk.Hash256(path.hash),
+    "hash": new sdkCore.Hash256(path.hash),
     "isLeft": path.position === "left"
   }));
   return paths;
 });
 
-result = symbolSdk.symbol.proveMerkle(leaf, merkleProof, HRoot);
+result = sdkSymbol.proveMerkle(leaf, merkleProof, HRoot);
 console.log(result);
 ```
 
@@ -330,7 +331,7 @@ previousBlockHash = await fetch(
   return json.meta.hash;
 });
 
-if(block.type === symbolSdk.symbol.BlockType.NORMAL.value){
+if(block.type === sdkSymbol.models.BlockType.NORMAL.value){
   hasher = sha3_256.create();
   hasher.update(Buffer.from(block.signature,'hex')); //signature
   hasher.update(Buffer.from(block.signerPublicKey,'hex')); //publicKey
@@ -349,7 +350,7 @@ if(block.type === symbolSdk.symbol.BlockType.NORMAL.value){
   hasher.update(Buffer.from(block.stateHash,'hex'));
   hasher.update(Buffer.from(block.beneficiaryAddress,'hex'));
   hasher.update(Buffer.from(block.feeMultiplier.toString(16).padStart(4 * 2, '0'),'hex').reverse());
-  hash = symbolSdk.utils.uint8ToHex(hasher.digest());
+  hash = sdkCore.utils.uint8ToHex(hasher.digest());
   console.log(hash === blockInfo.meta.hash);
 }
 ```
@@ -433,7 +434,7 @@ previousBlockHash = await fetch(
   return json.meta.hash;
 });
 
-if(block.type === symbolSdk.symbol.BlockType.IMPORTANCE.value){
+if(block.type === sdkSymbol.models.BlockType.IMPORTANCE.value){
   hasher = sha3_256.create();
   hasher.update(Buffer.from(block.signature,'hex')); //signature
   hasher.update(Buffer.from(block.signerPublicKey,'hex')); //publicKey
@@ -457,7 +458,7 @@ if(block.type === symbolSdk.symbol.BlockType.IMPORTANCE.value){
   hasher.update(Buffer.from(BigInt(block.totalVotingBalance).toString(16).padStart(8 * 2, '0'),'hex').reverse());
   hasher.update(Buffer.from(block.previousImportanceBlockHash,'hex')); //signature
 
-  hash = symbolSdk.utils.uint8ToHex(hasher.digest());
+  hash = sdkCore.utils.uint8ToHex(hasher.digest());
   console.log(hash === blockInfo.meta.hash);
 }
 ```
@@ -543,7 +544,7 @@ hasher.update(Buffer.from(blockInfo.meta.stateHashSubCacheMerkleRoots[5],'hex'))
 hasher.update(Buffer.from(blockInfo.meta.stateHashSubCacheMerkleRoots[6],'hex')); //AccountRestriction
 hasher.update(Buffer.from(blockInfo.meta.stateHashSubCacheMerkleRoots[7],'hex')); //MosaicRestriction
 hasher.update(Buffer.from(blockInfo.meta.stateHashSubCacheMerkleRoots[8],'hex')); //Metadata
-hash = symbolSdk.utils.uint8ToHex(hasher.digest());
+hash = sdkCore.utils.uint8ToHex(hasher.digest());
 console.log(blockInfo.block.stateHash === hash);
 ```
 
@@ -616,17 +617,17 @@ function checkState(stateProof,stateHash,pathHash,rootHash){
 //葉のハッシュ値取得関数
 function getLeafHash(encodedPath, leafValue){
     const hasher = sha3_256.create();
-    return symbolSdk.utils.uint8ToHex(hasher.update(symbolSdk.utils.hexToUint8(encodedPath + leafValue)).digest());
+    return sdkCore.utils.uint8ToHex(hasher.update(sdkCore.utils.hexToUint8(encodedPath + leafValue)).digest());
 }
 
 //枝のハッシュ値取得関数
 function getBranchHash(encodedPath, links){
-    const branchLinks = Array(16).fill(symbolSdk.utils.uint8ToHex(new Uint8Array(32)));
+    const branchLinks = Array(16).fill(sdkCore.utils.uint8ToHex(new Uint8Array(32)));
     links.forEach((link) => {
         branchLinks[parseInt(`0x${link.bit}`, 16)] = link.link;
     });
     const hasher = sha3_256.create();
-    const bHash = symbolSdk.utils.uint8ToHex(hasher.update(symbolSdk.utils.hexToUint8(encodedPath + branchLinks.join(''))).digest());
+    const bHash = sdkCore.utils.uint8ToHex(hasher.update(sdkCore.utils.hexToUint8(encodedPath + branchLinks.join(''))).digest());
     return bHash;
 }
 
@@ -703,10 +704,10 @@ checkState(stateProof,aliceStateHash,alicePathHash,rootHash);
 #### v3
 
 ```js
-aliceAddress = new symbolSdk.symbol.Address("TBIL6D6RURP45YQRWV6Q7YVWIIPLQGLZQFHWFEQ");
+aliceAddress = new sdkSymbol.Address("TBIL6D6RURP45YQRWV6Q7YVWIIPLQGLZQFHWFEQ");
 
 hasher = sha3_256.create();
-alicePathHash = symbolSdk.utils.uint8ToHex(hasher.update(aliceAddress.bytes).digest());
+alicePathHash = sdkCore.utils.uint8ToHex(hasher.update(aliceAddress.bytes).digest());
 
 hasher = sha3_256.create();
 aliceInfo = await fetch(
@@ -728,22 +729,22 @@ supplementalPublicKeysMask = 0x00;
 linkedPublicKey = new Uint8Array([]);
 if (aliceInfo.supplementalPublicKeys.linked !== undefined) {
   supplementalPublicKeysMask |= 0x01;
-  linkedPublicKey = symbolSdk.utils.hexToUint8(aliceInfo.supplementalPublicKeys.linked.publicKey);
+  linkedPublicKey = sdkCore.utils.hexToUint8(aliceInfo.supplementalPublicKeys.linked.publicKey);
 }
 nodePublicKey = new Uint8Array([]);
 if (aliceInfo.supplementalPublicKeys.node !== undefined) {
   supplementalPublicKeysMask |= 0x02;
-  nodePublicKey = symbolSdk.utils.hexToUint8(aliceInfo.supplementalPublicKeys.node.publicKey);
+  nodePublicKey = sdkCore.utils.hexToUint8(aliceInfo.supplementalPublicKeys.node.publicKey);
 }
 vrfPublicKey = new Uint8Array([]);
 if (aliceInfo.supplementalPublicKeys.vrf !== undefined) {
   supplementalPublicKeysMask |= 0x04;
-  vrfPublicKey = symbolSdk.utils.hexToUint8(aliceInfo.supplementalPublicKeys.vrf.publicKey);
+  vrfPublicKey = sdkCore.utils.hexToUint8(aliceInfo.supplementalPublicKeys.vrf.publicKey);
 }
 votingPublicKeys = new Uint8Array([]);
 if (aliceInfo.supplementalPublicKeys.voting !== undefined) {
   aliceInfo.supplementalPublicKeys.voting.publicKeys.forEach(key => {
-    votingPublicKeys = new Uint8Array([...votingPublicKeys, ...symbolSdk.utils.hexToUint8(key.publicKey)]);
+    votingPublicKeys = new Uint8Array([...votingPublicKeys, ...sdkCore.utils.hexToUint8(key.publicKey)]);
   });
 }
 importanceSnapshots = new Uint8Array([]);
@@ -769,14 +770,14 @@ if (aliceInfo.importance > 0) {
 balances = new Uint8Array([]);
 if (aliceInfo.mosaics.length > 0) {
   aliceInfo.mosaics.forEach(mosaic => {
-    balances = new Uint8Array([...balances, ...symbolSdk.utils.hexToUint8(mosaic.id).reverse(), ...Buffer.from(BigInt(mosaic.amount).toString(16).padStart(8 * 2, '0'),'hex').reverse()]);
+    balances = new Uint8Array([...balances, ...sdkCore.utils.hexToUint8(mosaic.id).reverse(), ...Buffer.from(BigInt(mosaic.amount).toString(16).padStart(8 * 2, '0'),'hex').reverse()]);
   });
 }
 accountInfoBytes = new Uint8Array([
   ...Buffer.from(aliceInfo.version.toString(16).padStart(2 * 2, '0'),'hex').reverse(),
-  ...symbolSdk.utils.hexToUint8(aliceInfo.address),
+  ...sdkCore.utils.hexToUint8(aliceInfo.address),
   ...Buffer.from(BigInt(aliceInfo.addressHeight).toString(16).padStart(8 * 2, '0'),'hex').reverse(),
-  ...symbolSdk.utils.hexToUint8(aliceInfo.publicKey),
+  ...sdkCore.utils.hexToUint8(aliceInfo.publicKey),
   ...Buffer.from(BigInt(aliceInfo.publicKeyHeight).toString(16).padStart(8 * 2, '0'),'hex').reverse(),
   ...Buffer.from(aliceInfo.accountType.toString(16).padStart(1 * 2, '0'),'hex').reverse(),
   ...Buffer.from(format.toString(16).padStart(1 * 2, '0'),'hex').reverse(),
@@ -786,7 +787,7 @@ accountInfoBytes = new Uint8Array([
   ...importanceSnapshots, ...activityBuckets,
   ...Buffer.from(aliceInfo.mosaics.length.toString(16).padStart(2 * 2, '0'),'hex').reverse(), ...balances
 ]);
-aliceStateHash = symbolSdk.utils.uint8ToHex(hasher.update(accountInfoBytes).digest());
+aliceStateHash = sdkCore.utils.uint8ToHex(hasher.update(accountInfoBytes).digest());
 
 //サービス提供者以外のノードから最新のブロックヘッダー情報を取得
 query = new URLSearchParams({
@@ -883,22 +884,22 @@ checkState(stateProof,stateHash,pathHash,rootHash);
 #### v3
 
 ```js
-srcAddress = (new symbolSdk.symbol.Address("TBIL6D6RURP45YQRWV6Q7YVWIIPLQGLZQFHWFEQ")).bytes;
+srcAddress = (new sdkSymbol.Address("TBIL6D6RURP45YQRWV6Q7YVWIIPLQGLZQFHWFEQ")).bytes;
 
-targetAddress = (new symbolSdk.symbol.Address("TBIL6D6RURP45YQRWV6Q7YVWIIPLQGLZQFHWFEQ")).bytes;
+targetAddress = (new sdkSymbol.Address("TBIL6D6RURP45YQRWV6Q7YVWIIPLQGLZQFHWFEQ")).bytes;
 
 hasher = sha3_256.create();    
 hasher.update(srcAddress);
 hasher.update(targetAddress);
-hasher.update(symbolSdk.utils.hexToUint8("CF217E116AA422E2").reverse()); // scopeKey
-hasher.update(symbolSdk.utils.hexToUint8("1275B0B7511D9161").reverse()); // targetId
+hasher.update(sdkCore.utils.hexToUint8("CF217E116AA422E2").reverse()); // scopeKey, メタデータキーを指定
+hasher.update(sdkCore.utils.hexToUint8("1275B0B7511D9161").reverse()); // targetId, モザイクIDを指定
 hasher.update(Uint8Array.from([1])); // type: Mosaic 1
 compositeHash = hasher.digest();
 
 hasher = sha3_256.create();   
 hasher.update(compositeHash);
 
-pathHash = symbolSdk.utils.uint8ToHex(hasher.digest());
+pathHash = sdkCore.utils.uint8ToHex(hasher.digest());
 
 //stateHash(Value値)
 hasher = sha3_256.create();
@@ -906,15 +907,15 @@ version = 1;
 hasher.update(Buffer.from(version.toString(16).padStart(2 * 2, '0'),'hex').reverse()); //version
 hasher.update(srcAddress);
 hasher.update(targetAddress);
-hasher.update(symbolSdk.utils.hexToUint8("CF217E116AA422E2").reverse()); // scopeKey
-hasher.update(symbolSdk.utils.hexToUint8("1275B0B7511D9161").reverse()); // targetId
+hasher.update(sdkCore.utils.hexToUint8("CF217E116AA422E2").reverse()); // scopeKey, メタデータキーを指定
+hasher.update(sdkCore.utils.hexToUint8("1275B0B7511D9161").reverse()); // targetId, モザイクIDを指定
 hasher.update(Uint8Array.from([1])); //mosaic
 
 value = Buffer.from("test");
 
 hasher.update(Buffer.from(value.length.toString(16).padStart(2 * 2, '0'),'hex').reverse());
 hasher.update(value); 
-stateHash = symbolSdk.utils.uint8ToHex(hasher.digest());
+stateHash = sdkCore.utils.uint8ToHex(hasher.digest());
 
 //サービス提供者以外のノードから最新のブロックヘッダー情報を取得
 query = new URLSearchParams({
@@ -935,7 +936,7 @@ rootHash = blockInfo.data[0].meta.stateHashSubCacheMerkleRoots[8];
 
 //サービス提供者を含む任意のノードからマークル情報を取得
 stateProof = await fetch(
-  new URL('/metadata/' + symbolSdk.utils.uint8ToHex(compositeHash) + '/merkle', NODE),
+  new URL('/metadata/' + sdkCore.utils.uint8ToHex(compositeHash) + '/merkle', NODE),
   {
     method: 'GET',
     headers: { 'Content-Type': 'application/json' },
@@ -1010,23 +1011,23 @@ checkState(stateProof,stateHash,pathHash,rootHash);
 #### v3
 
 ```js
-srcAddress = (new symbolSdk.symbol.Address("TBIL6D6RURP45YQRWV6Q7YVWIIPLQGLZQFHWFEQ")).bytes;
+srcAddress = (new sdkSymbol.Address("TBIL6D6RURP45YQRWV6Q7YVWIIPLQGLZQFHWFEQ")).bytes;
 
-targetAddress = (new symbolSdk.symbol.Address("TBIL6D6RURP45YQRWV6Q7YVWIIPLQGLZQFHWFEQ")).bytes;
+targetAddress = (new sdkSymbol.Address("TBIL6D6RURP45YQRWV6Q7YVWIIPLQGLZQFHWFEQ")).bytes;
 
 //compositePathHash(Key値)
 hasher = sha3_256.create();    
 hasher.update(srcAddress);
 hasher.update(targetAddress);
-hasher.update(symbolSdk.utils.hexToUint8("9772B71B058127D7").reverse()); // scopeKey
-hasher.update(symbolSdk.utils.hexToUint8("0000000000000000").reverse()); // targetId
+hasher.update(sdkCore.utils.hexToUint8("9772B71B058127D7").reverse()); // scopeKey, メタデータキーを指定
+hasher.update(sdkCore.utils.hexToUint8("0000000000000000").reverse()); // targetId
 hasher.update(Uint8Array.from([0])); // type: Account 0
 compositeHash = hasher.digest();
 
 hasher = sha3_256.create();   
 hasher.update( Buffer.from(compositeHash,'hex'));
 
-pathHash = symbolSdk.utils.uint8ToHex(hasher.digest());
+pathHash = sdkCore.utils.uint8ToHex(hasher.digest());
 
 //stateHash(Value値)
 hasher = sha3_256.create();
@@ -1034,13 +1035,13 @@ version = 1;
 hasher.update(Buffer.from(version.toString(16).padStart(2 * 2, '0'),'hex').reverse()); //version
 hasher.update(srcAddress);
 hasher.update(targetAddress);
-hasher.update(symbolSdk.utils.hexToUint8("9772B71B058127D7").reverse()); // scopeKey
-hasher.update(symbolSdk.utils.hexToUint8("0000000000000000").reverse()); // targetId
+hasher.update(sdkCore.utils.hexToUint8("9772B71B058127D7").reverse()); // scopeKey, メタデータキーを指定
+hasher.update(sdkCore.utils.hexToUint8("0000000000000000").reverse()); // targetId
 hasher.update(Uint8Array.from([0])); //account
 value = Buffer.from("test");
 hasher.update(Buffer.from(value.length.toString(16).padStart(2 * 2, '0'),'hex').reverse());
 hasher.update(value); 
-stateHash = symbolSdk.utils.uint8ToHex(hasher.digest());
+stateHash = sdkCore.utils.uint8ToHex(hasher.digest());
 
 //サービス提供者以外のノードから最新のブロックヘッダー情報を取得
 query = new URLSearchParams({
@@ -1061,7 +1062,7 @@ rootHash = blockInfo.data[0].meta.stateHashSubCacheMerkleRoots[8];
 
 //サービス提供者を含む任意のノードからマークル情報を取得
 stateProof = await fetch(
-  new URL('/metadata/' + symbolSdk.utils.uint8ToHex(compositeHash) + '/merkle', NODE),
+  new URL('/metadata/' + sdkCore.utils.uint8ToHex(compositeHash) + '/merkle', NODE),
   {
     method: 'GET',
     headers: { 'Content-Type': 'application/json' },

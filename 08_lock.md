@@ -57,10 +57,10 @@ signedAggregateTx = alice.sign(aggregateTx, generationHash);
 #### v3
 
 ```js
-bobKey = new symbolSdk.symbol.KeyPair(symbolSdk.PrivateKey.random());
+bobKey = new sdkSymbol.KeyPair(sdkCore.PrivateKey.random());
 bobAddress = facade.network.publicKeyToAddress(bobKey.publicKey);
 
-namespaceIds = symbolSdk.symbol.generateNamespacePath("symbol.xym");
+namespaceIds = sdkSymbol.generateNamespacePath("symbol.xym");
 namespaceId = namespaceIds[namespaceIds.length - 1];
 
 // アグリゲートTxに含めるTxを作成
@@ -88,11 +88,18 @@ embeddedTransactions = [
 ];
 merkleHash = facade.constructor.hashEmbeddedTransactions(embeddedTransactions);
 
+// v3.2.0 暫定対応（コミットf183132で修正されてるはず）
+// v3.2.0 では、facade.network.fromDatetime()でネットワークのタイムスタンプを取得すると、内部処理でオーバーフローしてエラーとなってしまう
+// このため、事前にネットワークのタイムスタンプを算出しておく
+differenceMilliseconds = (new Date()).getTime() - facade.network.datetimeConverter.epoch.getTime();
+networkTimestamp = new sdkSymbol.NetworkTimestamp(Math.trunc(differenceMilliseconds / facade.network.datetimeConverter.timeUnits))
+
 // アグリゲートTx作成
 aggregateTx = facade.transactionFactory.create({
   type: 'aggregate_bonded_transaction_v2',
   signerPublicKey: aliceKey.publicKey,  // 署名者公開鍵
-  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+//  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+  deadline: networkTimestamp.addHours(2).timestamp, //Deadline:有効期限
   transactionsHash: merkleHash,
   transactions: embeddedTransactions
 });
@@ -102,7 +109,7 @@ requiredCosignatures = 1; // 必要な連署者の数を指定
 calculatedCosignatures = requiredCosignatures > aggregateTx.cosignatures.length ? requiredCosignatures : aggregateTx.cosignatures.length;
 sizePerCosignature = 8 + 32 + 64;
 calculatedSize = aggregateTx.size - aggregateTx.cosignatures.length * sizePerCosignature + calculatedCosignatures * sizePerCosignature;
-aggregateTx.fee = new symbolSdk.symbol.Amount(BigInt(calculatedSize * 100)); //手数料
+aggregateTx.fee = new sdkSymbol.models.Amount(BigInt(calculatedSize * 100)); //手数料
 
 // 署名
 sig = facade.signTransaction(aliceKey, aggregateTx);
@@ -139,16 +146,23 @@ await txRepo.announce(signedLockTx).toPromise();
 #### v3
 
 ```js
+// v3.2.0 暫定対応（コミットf183132で修正されてるはず）
+// v3.2.0 では、facade.network.fromDatetime()でネットワークのタイムスタンプを取得すると、内部処理でオーバーフローしてエラーとなってしまう
+// このため、事前にネットワークのタイムスタンプを算出しておく
+differenceMilliseconds = (new Date()).getTime() - facade.network.datetimeConverter.epoch.getTime();
+networkTimestamp = new sdkSymbol.NetworkTimestamp(Math.trunc(differenceMilliseconds / facade.network.datetimeConverter.timeUnits))
+
 // ハッシュロックTx作成
 hashLockTx = facade.transactionFactory.create({
   type: 'hash_lock_transaction_v1',     // Txタイプ:ハッシュロックTx
   signerPublicKey: aliceKey.publicKey,  // 署名者公開鍵
-  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+//  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+  deadline: networkTimestamp.addHours(2).timestamp, //Deadline:有効期限
   mosaic: { mosaicId: namespaceId, amount: 10n * 1000000n },  // 10xym固定値
-  duration: new symbolSdk.symbol.BlockDuration(480n),         // ロック有効期限
+  duration: new sdkSymbol.models.BlockDuration(480n),         // ロック有効期限
   hash: facade.hashTransaction(aggregateTx)                   // アグリゲートトランザクションのハッシュ値を登録
 });
-hashLockTx.fee = new symbolSdk.symbol.Amount(BigInt(hashLockTx.size * 100)); // 手数料
+hashLockTx.fee = new sdkSymbol.models.Amount(BigInt(hashLockTx.size * 100)); // 手数料
 
 // 署名
 hashLockSig = facade.signTransaction(aliceKey, hashLockTx);
@@ -225,12 +239,12 @@ txInfo = await fetch(
 });
 
 // 連署者の署名
-cosignature = new symbolSdk.symbol.DetachedCosignature();
-signTxHash = new symbolSdk.symbol.Hash256(symbolSdk.utils.hexToUint8(txInfo.meta.hash));
+cosignature = new sdkSymbol.models.DetachedCosignature();
+signTxHash = new sdkCore.Hash256(sdkCore.utils.hexToUint8(txInfo.meta.hash));
 cosignature.parentHash = signTxHash;
 cosignature.version = 0n;
 cosignature.signerPublicKey = bobKey.publicKey;
-cosignature.signature = new symbolSdk.symbol.Signature(bobKey.sign(signTxHash.bytes).bytes);
+cosignature.signature = new sdkSymbol.models.Signature(bobKey.sign(signTxHash.bytes).bytes);
 
 // アナウンス
 body= {
@@ -284,7 +298,7 @@ console.log("https://testnet.symbol.tools/?recipient=" + bob.address.plain() +"&
 #### v3
 
 ```js
-bobKey = new symbolSdk.symbol.KeyPair(symbolSdk.PrivateKey.random());
+bobKey = new sdkSymbol.KeyPair(sdkCore.PrivateKey.random());
 bobAddress = facade.network.publicKeyToAddress(bobKey.publicKey);
 console.log(bobAddress.toString());
 
@@ -324,8 +338,8 @@ proof = crypto.getRandomValues(new Uint8Array(20)); // 解除用キーワード
 hash = sha3_256.create();
 hash.update(proof);
 secret = hash.digest();                             // ロック用キーワード  
-console.log("secret:" + symbolSdk.utils.uint8ToHex(secret));
-console.log("proof:" + symbolSdk.utils.uint8ToHex(proof));
+console.log("secret:" + sdkCore.utils.uint8ToHex(secret));
+console.log("proof:" + sdkCore.utils.uint8ToHex(proof));
 ```
 
 ###### 出力例
@@ -360,18 +374,25 @@ await txRepo.announce(signedLockTx).toPromise();
 #### v3
 
 ```js
+// v3.2.0 暫定対応（コミットf183132で修正されてるはず）
+// v3.2.0 では、facade.network.fromDatetime()でネットワークのタイムスタンプを取得すると、内部処理でオーバーフローしてエラーとなってしまう
+// このため、事前にネットワークのタイムスタンプを算出しておく
+differenceMilliseconds = (new Date()).getTime() - facade.network.datetimeConverter.epoch.getTime();
+networkTimestamp = new sdkSymbol.NetworkTimestamp(Math.trunc(differenceMilliseconds / facade.network.datetimeConverter.timeUnits))
+
 // シークレットロックTx作成
 lockTx = facade.transactionFactory.create({
   type: 'secret_lock_transaction_v1',   // Txタイプ:シークレットロックTx
   signerPublicKey: aliceKey.publicKey,  // 署名者公開鍵
-  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+//  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+  deadline: networkTimestamp.addHours(2).timestamp, //Deadline:有効期限
   mosaic: { mosaicId: namespaceId, amount: 1000000n },        // ロックするモザイク
-  duration: new symbolSdk.symbol.BlockDuration(480n),         // ロック期間(ブロック数)
-  hashAlgorithm: symbolSdk.symbol.LockHashAlgorithm.SHA3_256, // ロックキーワード生成に使用したアルゴリズム
+  duration: new sdkSymbol.models.BlockDuration(480n),         // ロック期間(ブロック数)
+  hashAlgorithm: sdkSymbol.models.LockHashAlgorithm.SHA3_256, // ロックキーワード生成に使用したアルゴリズム
   secret: secret,                                             // ロック用キーワード
   recipientAddress: bobAddress,                               // 解除時の転送先:Bob
 });
-lockTx.fee = new symbolSdk.symbol.Amount(BigInt(lockTx.size * 100)); // 手数料
+lockTx.fee = new sdkSymbol.models.Amount(BigInt(lockTx.size * 100)); // 手数料
 
 // 署名
 sig = facade.signTransaction(aliceKey, lockTx);
@@ -429,7 +450,7 @@ console.log(res.data[0]);
 
 ```js
 params = new URLSearchParams({
-  "secret": symbolSdk.utils.uint8ToHex(secret),
+  "secret": sdkCore.utils.uint8ToHex(secret),
 });
 result = await fetch(
   new URL('/lock/secret?' + params.toString(), NODE),
@@ -495,23 +516,30 @@ await txRepo.announce(signedProofTx).toPromise();
 #### v3
 
 ```js
+// v3.2.0 暫定対応（コミットf183132で修正されてるはず）
+// v3.2.0 では、facade.network.fromDatetime()でネットワークのタイムスタンプを取得すると、内部処理でオーバーフローしてエラーとなってしまう
+// このため、事前にネットワークのタイムスタンプを算出しておく
+differenceMilliseconds = (new Date()).getTime() - facade.network.datetimeConverter.epoch.getTime();
+networkTimestamp = new sdkSymbol.NetworkTimestamp(Math.trunc(differenceMilliseconds / facade.network.datetimeConverter.timeUnits))
+
 // シークレットプルーフTx作成
 proofTx = facade.transactionFactory.create({
   type: 'secret_proof_transaction_v1',  // Txタイプ:シークレットプルーフTx
   signerPublicKey: bobKey.publicKey,    // 署名者公開鍵
-  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
-  hashAlgorithm: symbolSdk.symbol.LockHashAlgorithm.SHA3_256, // ロックキーワード生成に使用したアルゴリズム
+//  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+  deadline: networkTimestamp.addHours(2).timestamp, //Deadline:有効期限
+  hashAlgorithm: sdkSymbol.models.LockHashAlgorithm.SHA3_256, // ロックキーワード生成に使用したアルゴリズム
   secret: secret,                                             // ロックキーワード
   recipientAddress: bobAddress,                               // 解除アカウント（受信アカウント）
   proof: proof,                                               // 解除用キーワード
 });
-proofTx.fee = new symbolSdk.symbol.Amount(BigInt(proofTx.size * 100)); // 手数料
+proofTx.fee = new sdkSymbol.models.Amount(BigInt(proofTx.size * 100)); // 手数料
 
 // 署名
 sig = facade.signTransaction(bobKey, proofTx);
 jsonPayload = facade.transactionFactory.constructor.attachSignature(proofTx, sig);
 
-// シークレットロックTXをアナウンス
+// シークレットプルーフTXをアナウンス
 await fetch(
   new URL('/transactions', NODE),
   {
@@ -633,8 +661,8 @@ console.log(receiptInfo.data);
 
 ```js
 params = new URLSearchParams({
-  "receiptType": symbolSdk.symbol.ReceiptType.LOCK_SECRET_COMPLETED.value,
-  "targetAddress": bob.address.toString(),
+  "receiptType": sdkSymbol.models.ReceiptType.LOCK_SECRET_COMPLETED.value,
+  "targetAddress": bobAddress.toString(),
 });
 result = await fetch(
   new URL('/statements/transaction?' + params.toString(), NODE),

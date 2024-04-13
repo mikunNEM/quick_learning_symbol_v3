@@ -67,10 +67,10 @@ hasher.update((new TextEncoder()).encode(key));
 digest = hasher.digest();
 lower = [...digest.subarray(0, 4)];
 lower.reverse();
-lowerValue = BigInt("0x" + symbolSdk.utils.uint8ToHex(lower));
+lowerValue = BigInt("0x" + sdkCore.utils.uint8ToHex(lower));
 higher = [...digest.subarray(4, 8)];
 higher.reverse();
-higherValue = BigInt("0x" + symbolSdk.utils.uint8ToHex(higher)) | 0x80000000n;
+higherValue = BigInt("0x" + sdkCore.utils.uint8ToHex(higher)) | 0x80000000n;
 keyId = lowerValue + higherValue * 0x100000000n;
 valueData = (new TextEncoder()).encode(value);
 
@@ -96,7 +96,7 @@ metadataInfo = await fetch(
 sizeDelta = valueData.length;
 if (metadataInfo.length > 0) {
   sizeDelta -= metadataInfo[0].metadataEntry.valueSize;
-  originData = symbolSdk.utils.hexToUint8(metadataInfo[0].metadataEntry.value);
+  originData = sdkCore.utils.hexToUint8(metadataInfo[0].metadataEntry.value);
   diffData = new Uint8Array(Math.max(originData.length, valueData.length));
   for (idx = 0; idx < diffData.length; idx++) {
     diffData[idx] = (originData[idx] == undefined ? 0 : originData[idx]) ^ (valueData[idx] == undefined ? 0 : valueData[idx]);
@@ -120,11 +120,18 @@ embeddedTransactions = [
 ];
 merkleHash = facade.constructor.hashEmbeddedTransactions(embeddedTransactions);
 
+// v3.2.0 暫定対応（コミットf183132で修正されてるはず）
+// v3.2.0 では、facade.network.fromDatetime()でネットワークのタイムスタンプを取得すると、内部処理でオーバーフローしてエラーとなってしまう
+// このため、事前にネットワークのタイムスタンプを算出しておく
+differenceMilliseconds = (new Date()).getTime() - facade.network.datetimeConverter.epoch.getTime();
+networkTimestamp = new sdkSymbol.NetworkTimestamp(Math.trunc(differenceMilliseconds / facade.network.datetimeConverter.timeUnits))
+
 // アグリゲートTx作成
 aggregateTx = facade.transactionFactory.create({
   type: 'aggregate_complete_transaction_v2',
   signerPublicKey: aliceKey.publicKey,  // 署名者公開鍵
-  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+//  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+  deadline: networkTimestamp.addHours(2).timestamp, //Deadline:有効期限
   transactionsHash: merkleHash,
   transactions: embeddedTransactions
 });
@@ -134,7 +141,7 @@ requiredCosignatures = 0; // 必要な連署者の数を指定
 calculatedCosignatures = requiredCosignatures > aggregateTx.cosignatures.length ? requiredCosignatures : aggregateTx.cosignatures.length;
 sizePerCosignature = 8 + 32 + 64;
 calculatedSize = aggregateTx.size - aggregateTx.cosignatures.length * sizePerCosignature + calculatedCosignatures * sizePerCosignature;
-aggregateTx.fee = new symbolSdk.symbol.Amount(BigInt(calculatedSize * 100)); //手数料
+aggregateTx.fee = new sdkSymbol.models.Amount(BigInt(calculatedSize * 100)); //手数料
 
 // 署名とアナウンス
 sig = facade.signTransaction(aliceKey, aggregateTx);
@@ -199,10 +206,10 @@ hasher.update((new TextEncoder()).encode(key));
 digest = hasher.digest();
 lower = [...digest.subarray(0, 4)];
 lower.reverse();
-lowerValue = BigInt("0x" + symbolSdk.utils.uint8ToHex(lower));
+lowerValue = BigInt("0x" + sdkCore.utils.uint8ToHex(lower));
 higher = [...digest.subarray(4, 8)];
 higher.reverse();
-higherValue = BigInt("0x" + symbolSdk.utils.uint8ToHex(higher)) | 0x80000000n;
+higherValue = BigInt("0x" + sdkCore.utils.uint8ToHex(higher)) | 0x80000000n;
 keyId = lowerValue + higherValue * 0x100000000n;
 valueData = (new TextEncoder()).encode(value);
 
@@ -228,7 +235,7 @@ metadataInfo = await fetch(
 sizeDelta = valueData.length;
 if (metadataInfo.length > 0) {
   sizeDelta -= metadataInfo[0].metadataEntry.valueSize;
-  originData = symbolSdk.utils.hexToUint8(metadataInfo[0].metadataEntry.value);
+  originData = sdkCore.utils.hexToUint8(metadataInfo[0].metadataEntry.value);
   diffData = new Uint8Array(Math.max(originData.length, valueData.length));
   for (idx = 0; idx < diffData.length; idx++) {
     diffData[idx] = (originData[idx] == undefined ? 0 : originData[idx]) ^ (valueData[idx] == undefined ? 0 : valueData[idx]);
@@ -252,11 +259,18 @@ embeddedTransactions = [
 ];
 merkleHash = facade.constructor.hashEmbeddedTransactions(embeddedTransactions);
 
+// v3.2.0 暫定対応（コミットf183132で修正されてるはず）
+// v3.2.0 では、facade.network.fromDatetime()でネットワークのタイムスタンプを取得すると、内部処理でオーバーフローしてエラーとなってしまう
+// このため、事前にネットワークのタイムスタンプを算出しておく
+differenceMilliseconds = (new Date()).getTime() - facade.network.datetimeConverter.epoch.getTime();
+networkTimestamp = new sdkSymbol.NetworkTimestamp(Math.trunc(differenceMilliseconds / facade.network.datetimeConverter.timeUnits))
+
 // アグリゲートTx作成
 aggregateTx = facade.transactionFactory.create({
   type: 'aggregate_complete_transaction_v2',
   signerPublicKey: aliceKey.publicKey,  // 署名者公開鍵
-  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+//  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+  deadline: networkTimestamp.addHours(2).timestamp, //Deadline:有効期限
   transactionsHash: merkleHash,
   transactions: embeddedTransactions
 });
@@ -266,7 +280,7 @@ requiredCosignatures = 1; // 必要な連署者の数を指定
 calculatedCosignatures = requiredCosignatures > aggregateTx.cosignatures.length ? requiredCosignatures : aggregateTx.cosignatures.length;
 sizePerCosignature = 8 + 32 + 64;
 calculatedSize = aggregateTx.size - aggregateTx.cosignatures.length * sizePerCosignature + calculatedCosignatures * sizePerCosignature;
-aggregateTx.fee = new symbolSdk.symbol.Amount(BigInt(calculatedSize * 100)); //手数料
+aggregateTx.fee = new sdkSymbol.models.Amount(BigInt(calculatedSize * 100)); //手数料
 
 // 作成者による署名
 sig = facade.signTransaction(aliceKey, aggregateTx);
@@ -282,7 +296,7 @@ await fetch(
   {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({"payload": symbolSdk.utils.uint8ToHex(aggregateTx.serialize())}),
+    body: JSON.stringify({"payload": sdkCore.utils.uint8ToHex(aggregateTx.serialize())}),
   }
 )
 .then((res) => res.json())
@@ -343,7 +357,7 @@ new URL('/mosaics/' + targetMosaic.toString(16).toUpperCase(), NODE),
 .then((json) => {
   return json;
 });
-sourceAddress = new symbolSdk.symbol.Address(symbolSdk.utils.hexToUint8(mosaicInfo.mosaic.ownerAddress));  // モザイク作成者アドレス
+sourceAddress = new sdkSymbol.Address(sdkCore.utils.hexToUint8(mosaicInfo.mosaic.ownerAddress));  // モザイク作成者アドレス
 
 // キーと値の設定
 key = "key_mosaic";
@@ -355,10 +369,10 @@ hasher.update((new TextEncoder()).encode(key));
 digest = hasher.digest();
 lower = [...digest.subarray(0, 4)];
 lower.reverse();
-lowerValue = BigInt("0x" + symbolSdk.utils.uint8ToHex(lower));
+lowerValue = BigInt("0x" + sdkCore.utils.uint8ToHex(lower));
 higher = [...digest.subarray(4, 8)];
 higher.reverse();
-higherValue = BigInt("0x" + symbolSdk.utils.uint8ToHex(higher)) | 0x80000000n;
+higherValue = BigInt("0x" + sdkCore.utils.uint8ToHex(higher)) | 0x80000000n;
 keyId = lowerValue + higherValue * 0x100000000n;
 valueData = (new TextEncoder()).encode(value);
 
@@ -384,7 +398,7 @@ metadataInfo = await fetch(
 sizeDelta = valueData.length;
 if (metadataInfo.length > 0) {
   sizeDelta -= metadataInfo[0].metadataEntry.valueSize;
-  originData = symbolSdk.utils.hexToUint8(metadataInfo[0].metadataEntry.value);
+  originData = sdkCore.utils.hexToUint8(metadataInfo[0].metadataEntry.value);
   diffData = new Uint8Array(Math.max(originData.length, valueData.length));
   for (idx = 0; idx < diffData.length; idx++) {
     diffData[idx] = (originData[idx] == undefined ? 0 : originData[idx]) ^ (valueData[idx] == undefined ? 0 : valueData[idx]);
@@ -409,11 +423,18 @@ embeddedTransactions = [
 ];
 merkleHash = facade.constructor.hashEmbeddedTransactions(embeddedTransactions);
 
+// v3.2.0 暫定対応（コミットf183132で修正されてるはず）
+// v3.2.0 では、facade.network.fromDatetime()でネットワークのタイムスタンプを取得すると、内部処理でオーバーフローしてエラーとなってしまう
+// このため、事前にネットワークのタイムスタンプを算出しておく
+differenceMilliseconds = (new Date()).getTime() - facade.network.datetimeConverter.epoch.getTime();
+networkTimestamp = new sdkSymbol.NetworkTimestamp(Math.trunc(differenceMilliseconds / facade.network.datetimeConverter.timeUnits))
+
 // アグリゲートTx作成
 aggregateTx = facade.transactionFactory.create({
   type: 'aggregate_complete_transaction_v2',
   signerPublicKey: aliceKey.publicKey,  // 署名者公開鍵
-  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+//  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+  deadline: networkTimestamp.addHours(2).timestamp, //Deadline:有効期限
   transactionsHash: merkleHash,
   transactions: embeddedTransactions
 });
@@ -423,7 +444,7 @@ requiredCosignatures = 0; // 必要な連署者の数を指定
 calculatedCosignatures = requiredCosignatures > aggregateTx.cosignatures.length ? requiredCosignatures : aggregateTx.cosignatures.length;
 sizePerCosignature = 8 + 32 + 64;
 calculatedSize = aggregateTx.size - aggregateTx.cosignatures.length * sizePerCosignature + calculatedCosignatures * sizePerCosignature;
-aggregateTx.fee = new symbolSdk.symbol.Amount(BigInt(calculatedSize * 100)); //手数料
+aggregateTx.fee = new sdkSymbol.models.Amount(BigInt(calculatedSize * 100)); //手数料
 
 // 署名とアナウンス
 sig = facade.signTransaction(aliceKey, aggregateTx);
@@ -479,7 +500,7 @@ await txRepo.announce(signedTx).toPromise();
 
 ```js
 // ターゲットと作成者アドレスの設定
-targetNamespace = symbolSdk.symbol.generateNamespaceId("xembook");  // メタデータ記録先ネームスペース
+targetNamespace = sdkSymbol.generateNamespaceId("xembook");  // メタデータ記録先ネームスペース
 namespaceInfo = await fetch(
   new URL('/namespaces/' + targetNamespace.toString(16).toUpperCase(), NODE),
   {
@@ -491,7 +512,7 @@ namespaceInfo = await fetch(
 .then((json) => {
   return json;
 });
-sourceAddress = new symbolSdk.symbol.Address(symbolSdk.utils.hexToUint8(namespaceInfo.namespace.ownerAddress));  // ネームスペース作成者アドレス
+sourceAddress = new sdkSymbol.Address(sdkCore.utils.hexToUint8(namespaceInfo.namespace.ownerAddress));  // ネームスペース作成者アドレス
 
 // キーと値の設定
 key = "key_namespace";
@@ -503,10 +524,10 @@ hasher.update((new TextEncoder()).encode(key));
 digest = hasher.digest();
 lower = [...digest.subarray(0, 4)];
 lower.reverse();
-lowerValue = BigInt("0x" + symbolSdk.utils.uint8ToHex(lower));
+lowerValue = BigInt("0x" + sdkCore.utils.uint8ToHex(lower));
 higher = [...digest.subarray(4, 8)];
 higher.reverse();
-higherValue = BigInt("0x" + symbolSdk.utils.uint8ToHex(higher)) | 0x80000000n;
+higherValue = BigInt("0x" + sdkCore.utils.uint8ToHex(higher)) | 0x80000000n;
 keyId = lowerValue + higherValue * 0x100000000n;
 valueData = (new TextEncoder()).encode(value);
 
@@ -532,7 +553,7 @@ metadataInfo = await fetch(
 sizeDelta = valueData.length;
 if (metadataInfo.length > 0) {
   sizeDelta -= metadataInfo[0].metadataEntry.valueSize;
-  originData = symbolSdk.utils.hexToUint8(metadataInfo[0].metadataEntry.value);
+  originData = sdkCore.utils.hexToUint8(metadataInfo[0].metadataEntry.value);
   diffData = new Uint8Array(Math.max(originData.length, valueData.length));
   for (idx = 0; idx < diffData.length; idx++) {
     diffData[idx] = (originData[idx] == undefined ? 0 : originData[idx]) ^ (valueData[idx] == undefined ? 0 : valueData[idx]);
@@ -557,11 +578,18 @@ embeddedTransactions = [
 ];
 merkleHash = facade.constructor.hashEmbeddedTransactions(embeddedTransactions);
 
+// v3.2.0 暫定対応（コミットf183132で修正されてるはず）
+// v3.2.0 では、facade.network.fromDatetime()でネットワークのタイムスタンプを取得すると、内部処理でオーバーフローしてエラーとなってしまう
+// このため、事前にネットワークのタイムスタンプを算出しておく
+differenceMilliseconds = (new Date()).getTime() - facade.network.datetimeConverter.epoch.getTime();
+networkTimestamp = new sdkSymbol.NetworkTimestamp(Math.trunc(differenceMilliseconds / facade.network.datetimeConverter.timeUnits))
+
 // アグリゲートTx作成
 aggregateTx = facade.transactionFactory.create({
   type: 'aggregate_complete_transaction_v2',
   signerPublicKey: aliceKey.publicKey,  // 署名者公開鍵
-  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+//  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
+  deadline: networkTimestamp.addHours(2).timestamp, //Deadline:有効期限
   transactionsHash: merkleHash,
   transactions: embeddedTransactions
 });
@@ -571,7 +599,7 @@ requiredCosignatures = 0; // 必要な連署者の数を指定
 calculatedCosignatures = requiredCosignatures > aggregateTx.cosignatures.length ? requiredCosignatures : aggregateTx.cosignatures.length;
 sizePerCosignature = 8 + 32 + 64;
 calculatedSize = aggregateTx.size - aggregateTx.cosignatures.length * sizePerCosignature + calculatedCosignatures * sizePerCosignature;
-aggregateTx.fee = new symbolSdk.symbol.Amount(BigInt(calculatedSize * 100)); //手数料
+aggregateTx.fee = new sdkSymbol.models.Amount(BigInt(calculatedSize * 100)); //手数料
 
 // 署名とアナウンス
 sig = facade.signTransaction(aliceKey, aggregateTx);

@@ -31,7 +31,7 @@ networkTypeは以下の通りです。
 v3 では `Account` クラスが無いため、秘密鍵・公開鍵の鍵セットとアドレスを別々に作成する必要あります。
 
 ```js
-aliceKey = new symbolSdk.symbol.KeyPair(symbolSdk.PrivateKey.random());
+aliceKey = new sdkSymbol.KeyPair(sdkCore.PrivateKey.random());
 console.log(aliceKey);
 aliceAddress = facade.network.publicKeyToAddress(aliceKey.publicKey);
 console.log(aliceAddress);
@@ -108,7 +108,7 @@ alice = sym.Account.createFromPrivateKey(
 #### v3
 
 ```js
-aliceKey = new symbolSdk.symbol.KeyPair(new symbolSdk.PrivateKey("1E9139CC1580B4AED6A1FE110085281D4982ED0D89CE07F3380EB83069B1****"));
+aliceKey = new sdkSymbol.KeyPair(new sdkCore.PrivateKey("1E9139CC1580B4AED6A1FE110085281D4982ED0D89CE07F3380EB83069B1****"));
 aliceAddress = facade.network.publicKeyToAddress(aliceKey.publicKey);
 ```
 
@@ -134,7 +134,7 @@ console.log(alicePublicAccount);
 #### v3
 
 ```js
-alicePublicAccount = new symbolSdk.symbol.PublicKey(Uint8Array.from(Buffer.from("D4933FC1E4C56F9DF9314E9E0533173E1AB727BDB2A04B59F048124E93BEFBD2", "hex")));
+alicePublicAccount = new sdkCore.PublicKey(Uint8Array.from(Buffer.from("D4933FC1E4C56F9DF9314E9E0533173E1AB727BDB2A04B59F048124E93BEFBD2", "hex")));
 console.log(alicePublicAccount);
 console.log(alicePublicAccount.toString());
 ```
@@ -165,7 +165,7 @@ console.log(aliceAddress);
 #### v3
 
 ```js
-aliceAddress = new symbolSdk.symbol.Address("TBXUTAX6O6EUVPB6X7OBNX6UUXBMPPAFX7KE5TQ");
+aliceAddress = new sdkSymbol.Address("TBXUTAX6O6EUVPB6X7OBNX6UUXBMPPAFX7KE5TQ");
 console.log(aliceAddress);
 console.log(aliceAddress.toString());
 ```
@@ -358,7 +358,7 @@ bobPublicAccount = bob.publicAccount;
 #### v3
 
 ```js
-bobKey = new symbolSdk.symbol.KeyPair(symbolSdk.PrivateKey.random());
+bobKey = new sdkSymbol.KeyPair(sdkCore.PrivateKey.random());
 ```
 
 #### 暗号化
@@ -385,7 +385,7 @@ console.log(encryptedMessage);
 
 ```js
 message = 'Hello Symbol!';
-aliceMsgEncoder = new symbolSdk.symbol.MessageEncoder(aliceKey);
+aliceMsgEncoder = new sdkSymbol.MessageEncoder(aliceKey);
 encryptedMessage = aliceMsgEncoder.encode(bobKey.publicKey, new TextEncoder().encode(message));
 console.log(Buffer.from(encryptedMessage).toString("hex").toUpperCase());
 ```
@@ -411,8 +411,8 @@ console.log(decryptMessage);
 #### v3
 
 ```js
-bobMsgEncoder = new symbolSdk.symbol.MessageEncoder(bobKey);
-decryptMessageData = bobMsgEncoder.tryDecode(aliceKey.publicKey, Uint8Array.from(Buffer.from("0167AF68C3E7EFBD7048F6E9140FAA14256B64DD19FD0708EDCF17758A81FCC00084D869D6F1434A77AF", "hex")));
+bobMsgEncoder = new sdkSymbol.MessageEncoder(bobKey);
+decryptMessageData = bobMsgEncoder.tryDecode(aliceKey.publicKey, Uint8Array.from(Buffer.from("0167AF68C3E7EFBD7048F6E9140FAA14256B64DD19FD0708EDCF17758A81FCC00084D869D6F1434A77AF", "hex"))); // 暗号化時のデータに置き換えてください
 console.log(decryptMessageData);
 if (decryptMessageData.isDecoded) {
   decryptMessage = new TextDecoder().decode(decryptMessageData.message);
@@ -426,6 +426,8 @@ if (decryptMessageData.isDecoded) {
 > {isDecoded: true, message: Uint8Array(13)}
 > "Hello Symbol!"
 ```
+
+<details><summary>symbol-sdk v3.0.7 での注意点</summary>
 
 注意：
 v3.0.7 では復号化データの構造が異なります。
@@ -447,6 +449,8 @@ if (decryptMessageData[0]) {
 > [true, Uint8Array(13)]
 > "Hello Symbol!"
 ```
+
+</details>
 
 #### 署名
 
@@ -489,7 +493,7 @@ console.log(isVerified);
 #### v3
 
 ```js
-v = new symbolSdk.symbol.Verifier(aliceKey.publicKey);
+v = new sdkSymbol.Verifier(aliceKey.publicKey);
 isVerified = v.verify(Buffer.from("Hello Symbol!", 'utf-8'), signature);
 console.log(isVerified);
 ```
