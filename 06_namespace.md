@@ -104,18 +104,11 @@ await txRepo.announce(signedTx).toPromise();
 // ネームスペース設定
 name = "xembook";  // 作成するルートネームスペース
 
-// v3.2.0 暫定対応（コミットf183132で修正されてるはず）
-// v3.2.0 では、facade.network.fromDatetime()でネットワークのタイムスタンプを取得すると、内部処理でオーバーフローしてエラーとなってしまう
-// このため、事前にネットワークのタイムスタンプを算出しておく
-differenceMilliseconds = (new Date()).getTime() - facade.network.datetimeConverter.epoch.getTime();
-networkTimestamp = new sdkSymbol.NetworkTimestamp(Math.trunc(differenceMilliseconds / facade.network.datetimeConverter.timeUnits))
-
 // Tx作成
 tx = facade.transactionFactory.create({
   type: 'namespace_registration_transaction_v1',        // Txタイプ:ネームスペース登録Tx
   signerPublicKey: aliceKey.publicKey,                  // 署名者公開鍵
-//  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
-  deadline: networkTimestamp.addHours(2).timestamp, //Deadline:有効期限
+  deadline: facade.network.fromDatetime(new Date()).addHours(2).timestamp, //Deadline:有効期限
   duration: new sdkSymbol.models.BlockDuration(86400n), // duration:有効期限
   registrationType: sdkSymbol.models.NamespaceRegistrationType.ROOT,
   name: (new TextEncoder('utf-8')).encode(name)
@@ -161,17 +154,10 @@ await txRepo.announce(signedTx).toPromise();
 parentNameId = sdkSymbol.generateNamespaceId("xembook"); // 紐づけたいルートネームスペース
 name = "tomato";  // 作成するサブネームスペース
 
-// v3.2.0 暫定対応（コミットf183132で修正されてるはず）
-// v3.2.0 では、facade.network.fromDatetime()でネットワークのタイムスタンプを取得すると、内部処理でオーバーフローしてエラーとなってしまう
-// このため、事前にネットワークのタイムスタンプを算出しておく
-differenceMilliseconds = (new Date()).getTime() - facade.network.datetimeConverter.epoch.getTime();
-networkTimestamp = new sdkSymbol.NetworkTimestamp(Math.trunc(differenceMilliseconds / facade.network.datetimeConverter.timeUnits))
-
 subNamespaceTx = facade.transactionFactory.create({
   type: 'namespace_registration_transaction_v1',      // Txタイプ:ネームスペース登録Tx
   signerPublicKey: aliceKey.publicKey,  // 署名者公開鍵
-//  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
-  deadline: networkTimestamp.addHours(2).timestamp, //Deadline:有効期限
+  deadline: facade.network.fromDatetime(new Date()).addHours(2).timestamp, //Deadline:有効期限
   duration: new sdkSymbol.models.BlockDuration(86400n), // duration:有効期限
   parentId: parentNameId,
   registrationType: sdkSymbol.models.NamespaceRegistrationType.CHILD,
@@ -324,18 +310,11 @@ await txRepo.announce(signedTx).toPromise();
 namespaceId = sdkSymbol.generateNamespaceId("xembook");
 address = new sdkSymbol.Address("TBIL6D6RURP45YQRWV6Q7YVWIIPLQGLZQFHWFEQ");
 
-// v3.2.0 暫定対応（コミットf183132で修正されてるはず）
-// v3.2.0 では、facade.network.fromDatetime()でネットワークのタイムスタンプを取得すると、内部処理でオーバーフローしてエラーとなってしまう
-// このため、事前にネットワークのタイムスタンプを算出しておく
-differenceMilliseconds = (new Date()).getTime() - facade.network.datetimeConverter.epoch.getTime();
-networkTimestamp = new sdkSymbol.NetworkTimestamp(Math.trunc(differenceMilliseconds / facade.network.datetimeConverter.timeUnits))
-
 // Tx作成
 tx = facade.transactionFactory.create({
   type: 'address_alias_transaction_v1', // Txタイプ:アドレスエイリアスTx
   signerPublicKey: aliceKey.publicKey,  // 署名者公開鍵
-//  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
-  deadline: networkTimestamp.addHours(2).timestamp, //Deadline:有効期限
+  deadline: facade.network.fromDatetime(new Date()).addHours(2).timestamp, //Deadline:有効期限
   namespaceId: namespaceId,
   address: address,
   aliasAction: sdkSymbol.models.AliasAction.LINK
@@ -387,18 +366,11 @@ namespaceIds = sdkSymbol.generateNamespacePath("xembook.tomato");
 namespaceId = namespaceIds[namespaceIds.length - 1];
 mosaicId = new sdkSymbol.models.MosaicId(0x3A8416DB2D53xxxxn);
 
-// v3.2.0 暫定対応（コミットf183132で修正されてるはず）
-// v3.2.0 では、facade.network.fromDatetime()でネットワークのタイムスタンプを取得すると、内部処理でオーバーフローしてエラーとなってしまう
-// このため、事前にネットワークのタイムスタンプを算出しておく
-differenceMilliseconds = (new Date()).getTime() - facade.network.datetimeConverter.epoch.getTime();
-networkTimestamp = new sdkSymbol.NetworkTimestamp(Math.trunc(differenceMilliseconds / facade.network.datetimeConverter.timeUnits))
-
 // Tx作成
 tx = facade.transactionFactory.create({
   type: 'mosaic_alias_transaction_v1',  // Txタイプ:モザイクエイリアスTx
   signerPublicKey: aliceKey.publicKey,  // 署名者公開鍵
-//  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
-  deadline: networkTimestamp.addHours(2).timestamp, //Deadline:有効期限
+  deadline: facade.network.fromDatetime(new Date()).addHours(2).timestamp, //Deadline:有効期限
   namespaceId: namespaceId,
   mosaicId: mosaicId,
   aliasAction: sdkSymbol.models.AliasAction.LINK
@@ -456,18 +428,11 @@ namespaceIdData = sdkCore.utils.hexToUint8(namespaceId.toString(16));
 namespaceIdData.reverse();
 unresolvecAccount = new Uint8Array([networkType + 1, ...namespaceIdData, ...(new Uint8Array(24 - (namespaceIdData.length + 1)))]);
 
-// v3.2.0 暫定対応（コミットf183132で修正されてるはず）
-// v3.2.0 では、facade.network.fromDatetime()でネットワークのタイムスタンプを取得すると、内部処理でオーバーフローしてエラーとなってしまう
-// このため、事前にネットワークのタイムスタンプを算出しておく
-differenceMilliseconds = (new Date()).getTime() - facade.network.datetimeConverter.epoch.getTime();
-networkTimestamp = new sdkSymbol.NetworkTimestamp(Math.trunc(differenceMilliseconds / facade.network.datetimeConverter.timeUnits))
-
 // Tx作成
 tx = facade.transactionFactory.create({
   type: 'transfer_transaction_v1',      // Txタイプ:転送Tx
   signerPublicKey: aliceKey.publicKey,  // 署名者公開鍵
-//  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
-  deadline: networkTimestamp.addHours(2).timestamp, //Deadline:有効期限
+  deadline: facade.network.fromDatetime(new Date()).addHours(2).timestamp, //Deadline:有効期限
   recipientAddress: unresolvecAccount,  // UnresolvedAccount:未解決アカウントアドレス
   mosaics: [],
   message: new Uint8Array()
@@ -520,18 +485,11 @@ await txRepo.announce(signedTx).toPromise();
 namespaceIds = sdkSymbol.generateNamespacePath("xembook.tomato");
 namespaceId = namespaceIds[namespaceIds.length - 1];
 
-// v3.2.0 暫定対応（コミットf183132で修正されてるはず）
-// v3.2.0 では、facade.network.fromDatetime()でネットワークのタイムスタンプを取得すると、内部処理でオーバーフローしてエラーとなってしまう
-// このため、事前にネットワークのタイムスタンプを算出しておく
-differenceMilliseconds = (new Date()).getTime() - facade.network.datetimeConverter.epoch.getTime();
-networkTimestamp = new sdkSymbol.NetworkTimestamp(Math.trunc(differenceMilliseconds / facade.network.datetimeConverter.timeUnits))
-
 // Tx作成
 tx = facade.transactionFactory.create({
   type: 'transfer_transaction_v1',      // Txタイプ:転送Tx
   signerPublicKey: aliceKey.publicKey,  // 署名者公開鍵
-//  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
-  deadline: networkTimestamp.addHours(2).timestamp, //Deadline:有効期限
+  deadline: facade.network.fromDatetime(new Date()).addHours(2).timestamp, //Deadline:有効期限
   recipientAddress: address,
   mosaics: [
     {

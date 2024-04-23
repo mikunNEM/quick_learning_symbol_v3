@@ -74,18 +74,11 @@ tx = sym.TransferTransaction.create(
 #### v3
 
 ```js
-// v3.2.0 暫定対応（コミットf183132で修正されてるはず）
-// v3.2.0 では、facade.network.fromDatetime()でネットワークのタイムスタンプを取得すると、内部処理でオーバーフローしてエラーとなってしまう
-// このため、事前にネットワークのタイムスタンプを算出しておく
-differenceMilliseconds = (new Date()).getTime() - facade.network.datetimeConverter.epoch.getTime();
-networkTimestamp = new sdkSymbol.NetworkTimestamp(Math.trunc(differenceMilliseconds / facade.network.datetimeConverter.timeUnits))
-
 messageData = new Uint8Array([0x00,...(new TextEncoder('utf-8')).encode('Hello, Symbol!')]); //　平文メッセージ
 tx = facade.transactionFactory.create({
   type: 'transfer_transaction_v1',      // Txタイプ:転送Tx
   signerPublicKey: aliceKey.publicKey,  // 署名者公開鍵
-//  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
-  deadline: networkTimestamp.addHours(2).timestamp, //Deadline:有効期限
+  deadline: facade.network.fromDatetime(new Date()).addHours(2).timestamp, //Deadline:有効期限
   recipientAddress: bobAddress.toString(),
   mosaics: [
   // { mosaicId: 0x72C0212E67A08BCEn, amount: 1000000n } // 1XYM送金
@@ -111,13 +104,22 @@ sym.Deadline.create(epochAdjustment,6)
 #### v3
 
 ```js
-// v3.2.0 暫定（コミットf183132で修正されてるはず）
+facade.network.fromDatetime(new Date()).addHours(6).timestamp
+```
+
+<details><summary>symbol-sdk v3.2.0 での注意点</summary>
+
+v3.2.0 では、facade.network.fromDatetime()でネットワークのタイムスタンプを取得すると、内部処理でオーバーフローしてエラーとなってしまいます。
+このため、 v3.2.0 を使用する場合は、事前にネットワークのタイムスタンプを算出しておきます。
+
+```js
+// コミット f183132 相当の処理
 differenceMilliseconds = (new Date()).getTime() - facade.network.datetimeConverter.epoch.getTime();
 networkTimestamp = new sdkSymbol.NetworkTimestamp(Math.trunc(differenceMilliseconds / facade.network.datetimeConverter.timeUnits));
 networkTimestamp.addHours(6).timestamp;
-//// v3.2.1 以降はこっちになるはず
-// facade.network.fromDatetime(Date.now()).addHours(6).timestamp
 ```
+
+</details>
 
 #### メッセージ
 トランザクションに最大1023バイトのメッセージを添付することができます。
@@ -798,18 +800,11 @@ console.log(signedTx.hash);
 aliceMsgEncoder = new sdkSymbol.MessageEncoder(aliceKey);
 encryptedMessage = aliceMsgEncoder.encode(bobKey.publicKey, new TextEncoder().encode("Hello Symbol!"));
 
-// v3.2.0 暫定対応（コミットf183132で修正されてるはず）
-// v3.2.0 では、facade.network.fromDatetime()でネットワークのタイムスタンプを取得すると、内部処理でオーバーフローしてエラーとなってしまう
-// このため、事前にネットワークのタイムスタンプを算出しておく
-differenceMilliseconds = (new Date()).getTime() - facade.network.datetimeConverter.epoch.getTime();
-networkTimestamp = new sdkSymbol.NetworkTimestamp(Math.trunc(differenceMilliseconds / facade.network.datetimeConverter.timeUnits))
-
 // Tx 作成
 tx = facade.transactionFactory.create({
   type: 'transfer_transaction_v1',      // Txタイプ:転送Tx
   signerPublicKey: aliceKey.publicKey,  // 署名者公開鍵
-//  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
-  deadline: networkTimestamp.addHours(2).timestamp, //Deadline:有効期限
+  deadline: facade.network.fromDatetime(new Date()).addHours(2).timestamp, //Deadline:有効期限
   recipientAddress: bobAddress.toString(),
   mosaics: [
   // { mosaicId: 0x72C0212E67A08BCEn, amount: 1000000n } // 1XYM送金
@@ -1017,16 +1012,11 @@ embeddedTransactions = [
 ];
 merkleHash = facade.constructor.hashEmbeddedTransactions(embeddedTransactions);
 
-// v3.2.0 暫定（コミットf183132で修正されてるはず）
-differenceMilliseconds = (new Date()).getTime() - facade.network.datetimeConverter.epoch.getTime();
-networkTimestamp = new sdkSymbol.NetworkTimestamp(Math.trunc(differenceMilliseconds / facade.network.datetimeConverter.timeUnits));
-
 // アグリゲートTx作成
 aggregateTx = facade.transactionFactory.create({
   type: 'aggregate_complete_transaction_v2',
   signerPublicKey: aliceKey.publicKey,  // 署名者公開鍵
-//  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
-  deadline: networkTimestamp.addHours(2).timestamp, //Deadline:有効期限
+  deadline: facade.network.fromDatetime(new Date()).addHours(2).timestamp, //Deadline:有効期限
   transactionsHash: merkleHash,
   transactions: embeddedTransactions
 });
@@ -1079,8 +1069,7 @@ aggregateTx = sym.AggregateTransaction.createComplete(
 aggregateTx = facade.transactionFactory.create({
   type: 'aggregate_complete_transaction_v2',
   signerPublicKey: aliceKey.publicKey,  // 署名者公開鍵
-//  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
-  deadline: networkTimestamp.addHours(2).timestamp, //Deadline:有効期限
+  deadline: facade.network.fromDatetime(new Date()).addHours(2).timestamp, //Deadline:有効期限
   transactionsHash: merkleHash,
   transactions: embeddedTransactions
 });

@@ -120,18 +120,11 @@ embeddedTransactions = [
 ];
 merkleHash = facade.constructor.hashEmbeddedTransactions(embeddedTransactions);
 
-// v3.2.0 暫定対応（コミットf183132で修正されてるはず）
-// v3.2.0 では、facade.network.fromDatetime()でネットワークのタイムスタンプを取得すると、内部処理でオーバーフローしてエラーとなってしまう
-// このため、事前にネットワークのタイムスタンプを算出しておく
-differenceMilliseconds = (new Date()).getTime() - facade.network.datetimeConverter.epoch.getTime();
-networkTimestamp = new sdkSymbol.NetworkTimestamp(Math.trunc(differenceMilliseconds / facade.network.datetimeConverter.timeUnits))
-
 // アグリゲートTx作成
 aggregateTx = facade.transactionFactory.create({
   type: 'aggregate_complete_transaction_v2',
   signerPublicKey: aliceKey.publicKey,  // 署名者公開鍵
-//  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
-  deadline: networkTimestamp.addHours(2).timestamp, //Deadline:有効期限
+  deadline: facade.network.fromDatetime(new Date()).addHours(2).timestamp, //Deadline:有効期限
   transactionsHash: merkleHash,
   transactions: embeddedTransactions
 });
@@ -259,18 +252,11 @@ embeddedTransactions = [
 ];
 merkleHash = facade.constructor.hashEmbeddedTransactions(embeddedTransactions);
 
-// v3.2.0 暫定対応（コミットf183132で修正されてるはず）
-// v3.2.0 では、facade.network.fromDatetime()でネットワークのタイムスタンプを取得すると、内部処理でオーバーフローしてエラーとなってしまう
-// このため、事前にネットワークのタイムスタンプを算出しておく
-differenceMilliseconds = (new Date()).getTime() - facade.network.datetimeConverter.epoch.getTime();
-networkTimestamp = new sdkSymbol.NetworkTimestamp(Math.trunc(differenceMilliseconds / facade.network.datetimeConverter.timeUnits))
-
 // アグリゲートTx作成
 aggregateTx = facade.transactionFactory.create({
   type: 'aggregate_complete_transaction_v2',
   signerPublicKey: aliceKey.publicKey,  // 署名者公開鍵
-//  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
-  deadline: networkTimestamp.addHours(2).timestamp, //Deadline:有効期限
+  deadline: facade.network.fromDatetime(new Date()).addHours(2).timestamp, //Deadline:有効期限
   transactionsHash: merkleHash,
   transactions: embeddedTransactions
 });
@@ -423,18 +409,11 @@ embeddedTransactions = [
 ];
 merkleHash = facade.constructor.hashEmbeddedTransactions(embeddedTransactions);
 
-// v3.2.0 暫定対応（コミットf183132で修正されてるはず）
-// v3.2.0 では、facade.network.fromDatetime()でネットワークのタイムスタンプを取得すると、内部処理でオーバーフローしてエラーとなってしまう
-// このため、事前にネットワークのタイムスタンプを算出しておく
-differenceMilliseconds = (new Date()).getTime() - facade.network.datetimeConverter.epoch.getTime();
-networkTimestamp = new sdkSymbol.NetworkTimestamp(Math.trunc(differenceMilliseconds / facade.network.datetimeConverter.timeUnits))
-
 // アグリゲートTx作成
 aggregateTx = facade.transactionFactory.create({
   type: 'aggregate_complete_transaction_v2',
   signerPublicKey: aliceKey.publicKey,  // 署名者公開鍵
-//  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
-  deadline: networkTimestamp.addHours(2).timestamp, //Deadline:有効期限
+  deadline: facade.network.fromDatetime(new Date()).addHours(2).timestamp, //Deadline:有効期限
   transactionsHash: merkleHash,
   transactions: embeddedTransactions
 });
@@ -578,18 +557,11 @@ embeddedTransactions = [
 ];
 merkleHash = facade.constructor.hashEmbeddedTransactions(embeddedTransactions);
 
-// v3.2.0 暫定対応（コミットf183132で修正されてるはず）
-// v3.2.0 では、facade.network.fromDatetime()でネットワークのタイムスタンプを取得すると、内部処理でオーバーフローしてエラーとなってしまう
-// このため、事前にネットワークのタイムスタンプを算出しておく
-differenceMilliseconds = (new Date()).getTime() - facade.network.datetimeConverter.epoch.getTime();
-networkTimestamp = new sdkSymbol.NetworkTimestamp(Math.trunc(differenceMilliseconds / facade.network.datetimeConverter.timeUnits))
-
 // アグリゲートTx作成
 aggregateTx = facade.transactionFactory.create({
   type: 'aggregate_complete_transaction_v2',
   signerPublicKey: aliceKey.publicKey,  // 署名者公開鍵
-//  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
-  deadline: networkTimestamp.addHours(2).timestamp, //Deadline:有効期限
+  deadline: facade.network.fromDatetime(new Date()).addHours(2).timestamp, //Deadline:有効期限
   transactionsHash: merkleHash,
   transactions: embeddedTransactions
 });

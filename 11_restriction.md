@@ -69,18 +69,11 @@ f = sdkSymbol.models.AccountRestrictionFlags.ADDRESS.value; // アドレス制�
 f += sdkSymbol.models.AccountRestrictionFlags.BLOCK.value; // ブロック
 flags = new sdkSymbol.models.AccountRestrictionFlags(f);
 
-// v3.2.0 暫定対応（コミットf183132で修正されてるはず）
-// v3.2.0 では、facade.network.fromDatetime()でネットワークのタイムスタンプを取得すると、内部処理でオーバーフローしてエラーとなってしまう
-// このため、事前にネットワークのタイムスタンプを算出しておく
-differenceMilliseconds = (new Date()).getTime() - facade.network.datetimeConverter.epoch.getTime();
-networkTimestamp = new sdkSymbol.NetworkTimestamp(Math.trunc(differenceMilliseconds / facade.network.datetimeConverter.timeUnits))
-
 // アドレス制限設定Tx作成
 tx = facade.transactionFactory.create({
   type: 'account_address_restriction_transaction_v1', // Txタイプ:アドレス制限設定Tx
   signerPublicKey: carolKey.publicKey,                // 署名者公開鍵
-//  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
-  deadline: networkTimestamp.addHours(2).timestamp, //Deadline:有効期限
+  deadline: facade.network.fromDatetime(new Date()).addHours(2).timestamp, //Deadline:有効期限
   restrictionFlags: flags,  // アドレス制限フラグ
   restrictionAdditions: [   // 設定アドレス
     bobAddress,
@@ -153,18 +146,11 @@ f = sdkSymbol.models.AccountRestrictionFlags.MOSAIC_ID.value; // モザイク制
 f += sdkSymbol.models.AccountRestrictionFlags.BLOCK.value;    // ブロック
 flags = new sdkSymbol.models.AccountRestrictionFlags(f);
 
-// v3.2.0 暫定対応（コミットf183132で修正されてるはず）
-// v3.2.0 では、facade.network.fromDatetime()でネットワークのタイムスタンプを取得すると、内部処理でオーバーフローしてエラーとなってしまう
-// このため、事前にネットワークのタイムスタンプを算出しておく
-differenceMilliseconds = (new Date()).getTime() - facade.network.datetimeConverter.epoch.getTime();
-networkTimestamp = new sdkSymbol.NetworkTimestamp(Math.trunc(differenceMilliseconds / facade.network.datetimeConverter.timeUnits))
-
 // モザイク制限設定Tx作成
 tx = facade.transactionFactory.create({
   type: 'account_mosaic_restriction_transaction_v1',  // Txタイプ:モザイク制限設定Tx
   signerPublicKey: carolKey.publicKey,                // 署名者公開鍵
-//  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
-  deadline: networkTimestamp.addHours(2).timestamp, //Deadline:有効期限
+  deadline: facade.network.fromDatetime(new Date()).addHours(2).timestamp, //Deadline:有効期限
   restrictionFlags: flags,  // モザイク制限フラグ
   restrictionAdditions: [   // 設定モザイク
     0x72C0212E67A08BCEn,
@@ -237,18 +223,11 @@ f = sdkSymbol.models.AccountRestrictionFlags.TRANSACTION_TYPE.value;  // トラ�
 f += sdkSymbol.models.AccountRestrictionFlags.OUTGOING.value;         // 送信
 flags = new sdkSymbol.models.AccountRestrictionFlags(f);
 
-// v3.2.0 暫定対応（コミットf183132で修正されてるはず）
-// v3.2.0 では、facade.network.fromDatetime()でネットワークのタイムスタンプを取得すると、内部処理でオーバーフローしてエラーとなってしまう
-// このため、事前にネットワークのタイムスタンプを算出しておく
-differenceMilliseconds = (new Date()).getTime() - facade.network.datetimeConverter.epoch.getTime();
-networkTimestamp = new sdkSymbol.NetworkTimestamp(Math.trunc(differenceMilliseconds / facade.network.datetimeConverter.timeUnits))
-
 // トランザクション制限設定Tx作成
 tx = facade.transactionFactory.create({
   type: 'account_operation_restriction_transaction_v1', // Txタイプ:トランザクション制限設定Tx
   signerPublicKey: carolKey.publicKey,                  // 署名者公開鍵
-//  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
-  deadline: networkTimestamp.addHours(2).timestamp, //Deadline:有効期限
+  deadline: facade.network.fromDatetime(new Date()).addHours(2).timestamp, //Deadline:有効期限
   restrictionFlags: flags,  // トランザクション制限フラグ
   restrictionAdditions: [   // 設定トランザクション
     sdkSymbol.models.TransactionType.ACCOUNT_OPERATION_RESTRICTION.value,
@@ -517,18 +496,11 @@ embeddedTransactions = [
 ];
 merkleHash = facade.constructor.hashEmbeddedTransactions(embeddedTransactions);
 
-// v3.2.0 暫定対応（コミットf183132で修正されてるはず）
-// v3.2.0 では、facade.network.fromDatetime()でネットワークのタイムスタンプを取得すると、内部処理でオーバーフローしてエラーとなってしまう
-// このため、事前にネットワークのタイムスタンプを算出しておく
-differenceMilliseconds = (new Date()).getTime() - facade.network.datetimeConverter.epoch.getTime();
-networkTimestamp = new sdkSymbol.NetworkTimestamp(Math.trunc(differenceMilliseconds / facade.network.datetimeConverter.timeUnits))
-
 // アグリゲートTx作成
 aggregateTx = facade.transactionFactory.create({
   type: 'aggregate_complete_transaction_v2',
   signerPublicKey: carolKey.publicKey,  // 署名者公開鍵
-//  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
-  deadline: networkTimestamp.addHours(2).timestamp, //Deadline:有効期限
+  deadline: facade.network.fromDatetime(new Date()).addHours(2).timestamp, //Deadline:有効期限
   transactionsHash: merkleHash,
   transactions: embeddedTransactions
 });
@@ -614,18 +586,11 @@ await txRepo.announce(signedTx).toPromise();
 #### v3
 
 ```js
-// v3.2.0 暫定対応（コミットf183132で修正されてるはず）
-// v3.2.0 では、facade.network.fromDatetime()でネットワークのタイムスタンプを取得すると、内部処理でオーバーフローしてエラーとなってしまう
-// このため、事前にネットワークのタイムスタンプを算出しておく
-differenceMilliseconds = (new Date()).getTime() - facade.network.datetimeConverter.epoch.getTime();
-networkTimestamp = new sdkSymbol.NetworkTimestamp(Math.trunc(differenceMilliseconds / facade.network.datetimeConverter.timeUnits))
-
 // Carolに適用
 carolMosaicAddressResTx = facade.transactionFactory.create({
   type: 'mosaic_address_restriction_transaction_v1',  // Txタイプ:モザイク制限適用Tx
   signerPublicKey: carolKey.publicKey,                // 署名者公開鍵
-//  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
-  deadline: networkTimestamp.addHours(2).timestamp, //Deadline:有効期限
+  deadline: facade.network.fromDatetime(new Date()).addHours(2).timestamp, //Deadline:有効期限
   mosaicId: mosaicDefTx.id.value,
   restrictionKey: keyId,
   previousRestrictionValue: 0xFFFFFFFFFFFFFFFFn,
@@ -653,18 +618,11 @@ await fetch(
 bobKey = new sdkSymbol.KeyPair(sdkCore.PrivateKey.random());
 bobAddress = facade.network.publicKeyToAddress(bobKey.publicKey);
 
-// v3.2.0 暫定対応（コミットf183132で修正されてるはず）
-// v3.2.0 では、facade.network.fromDatetime()でネットワークのタイムスタンプを取得すると、内部処理でオーバーフローしてエラーとなってしまう
-// このため、事前にネットワークのタイムスタンプを算出しておく
-differenceMilliseconds = (new Date()).getTime() - facade.network.datetimeConverter.epoch.getTime();
-networkTimestamp = new sdkSymbol.NetworkTimestamp(Math.trunc(differenceMilliseconds / facade.network.datetimeConverter.timeUnits))
-
 // Bobに適用
 bobMosaicAddressResTx = facade.transactionFactory.create({
   type: 'mosaic_address_restriction_transaction_v1',  // Txタイプ:モザイク制限適用Tx
   signerPublicKey: carolKey.publicKey,                // 署名者公開鍵
-//  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
-  deadline: networkTimestamp.addHours(2).timestamp, //Deadline:有効期限
+  deadline: facade.network.fromDatetime(new Date()).addHours(2).timestamp, //Deadline:有効期限
   mosaicId: mosaicDefTx.id.value,
   restrictionKey: keyId,
   previousRestrictionValue: 0xFFFFFFFFFFFFFFFFn,
@@ -818,18 +776,11 @@ await txRepo.announce(signedTx).toPromise();
 #### v3
 
 ```js
-// v3.2.0 暫定対応（コミットf183132で修正されてるはず）
-// v3.2.0 では、facade.network.fromDatetime()でネットワークのタイムスタンプを取得すると、内部処理でオーバーフローしてエラーとなってしまう
-// このため、事前にネットワークのタイムスタンプを算出しておく
-differenceMilliseconds = (new Date()).getTime() - facade.network.datetimeConverter.epoch.getTime();
-networkTimestamp = new sdkSymbol.NetworkTimestamp(Math.trunc(differenceMilliseconds / facade.network.datetimeConverter.timeUnits))
-
 // 成功（CarolからBobに送信）
 trTx = facade.transactionFactory.create({
   type: 'transfer_transaction_v1',      // Txタイプ:転送Tx
   signerPublicKey: carolKey.publicKey,  // 署名者公開鍵
-//  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
-  deadline: networkTimestamp.addHours(2).timestamp, //Deadline:有効期限
+  deadline: facade.network.fromDatetime(new Date()).addHours(2).timestamp, //Deadline:有効期限
   recipientAddress: bobAddress.toString(),
   mosaics: [
     { mosaicId: mosaicDefTx.id.value, amount: 1n },
@@ -853,12 +804,6 @@ await fetch(
   return json;
 });
 
-// v3.2.0 暫定対応（コミットf183132で修正されてるはず）
-// v3.2.0 では、facade.network.fromDatetime()でネットワークのタイムスタンプを取得すると、内部処理でオーバーフローしてエラーとなってしまう
-// このため、事前にネットワークのタイムスタンプを算出しておく
-differenceMilliseconds = (new Date()).getTime() - facade.network.datetimeConverter.epoch.getTime();
-networkTimestamp = new sdkSymbol.NetworkTimestamp(Math.trunc(differenceMilliseconds / facade.network.datetimeConverter.timeUnits))
-
 // 失敗（CarolからDaveに送信）
 daveKey = new sdkSymbol.KeyPair(sdkCore.PrivateKey.random());
 daveAddress = facade.network.publicKeyToAddress(daveKey.publicKey);
@@ -866,8 +811,7 @@ daveAddress = facade.network.publicKeyToAddress(daveKey.publicKey);
 trTx = facade.transactionFactory.create({
   type: 'transfer_transaction_v1',      // Txタイプ:転送Tx
   signerPublicKey: carolKey.publicKey,  // 署名者公開鍵
-//  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
-  deadline: networkTimestamp.addHours(2).timestamp, //Deadline:有効期限
+  deadline: facade.network.fromDatetime(new Date()).addHours(2).timestamp, //Deadline:有効期限
   recipientAddress: daveAddress.toString(),
   mosaics: [
     { mosaicId: mosaicDefTx.id.value, amount: 1n },

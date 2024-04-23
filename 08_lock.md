@@ -88,18 +88,11 @@ embeddedTransactions = [
 ];
 merkleHash = facade.constructor.hashEmbeddedTransactions(embeddedTransactions);
 
-// v3.2.0 暫定対応（コミットf183132で修正されてるはず）
-// v3.2.0 では、facade.network.fromDatetime()でネットワークのタイムスタンプを取得すると、内部処理でオーバーフローしてエラーとなってしまう
-// このため、事前にネットワークのタイムスタンプを算出しておく
-differenceMilliseconds = (new Date()).getTime() - facade.network.datetimeConverter.epoch.getTime();
-networkTimestamp = new sdkSymbol.NetworkTimestamp(Math.trunc(differenceMilliseconds / facade.network.datetimeConverter.timeUnits))
-
 // アグリゲートTx作成
 aggregateTx = facade.transactionFactory.create({
   type: 'aggregate_bonded_transaction_v2',
   signerPublicKey: aliceKey.publicKey,  // 署名者公開鍵
-//  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
-  deadline: networkTimestamp.addHours(2).timestamp, //Deadline:有効期限
+  deadline: facade.network.fromDatetime(new Date()).addHours(2).timestamp, //Deadline:有効期限
   transactionsHash: merkleHash,
   transactions: embeddedTransactions
 });
@@ -146,18 +139,11 @@ await txRepo.announce(signedLockTx).toPromise();
 #### v3
 
 ```js
-// v3.2.0 暫定対応（コミットf183132で修正されてるはず）
-// v3.2.0 では、facade.network.fromDatetime()でネットワークのタイムスタンプを取得すると、内部処理でオーバーフローしてエラーとなってしまう
-// このため、事前にネットワークのタイムスタンプを算出しておく
-differenceMilliseconds = (new Date()).getTime() - facade.network.datetimeConverter.epoch.getTime();
-networkTimestamp = new sdkSymbol.NetworkTimestamp(Math.trunc(differenceMilliseconds / facade.network.datetimeConverter.timeUnits))
-
 // ハッシュロックTx作成
 hashLockTx = facade.transactionFactory.create({
   type: 'hash_lock_transaction_v1',     // Txタイプ:ハッシュロックTx
   signerPublicKey: aliceKey.publicKey,  // 署名者公開鍵
-//  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
-  deadline: networkTimestamp.addHours(2).timestamp, //Deadline:有効期限
+  deadline: facade.network.fromDatetime(new Date()).addHours(2).timestamp, //Deadline:有効期限
   mosaic: { mosaicId: namespaceId, amount: 10n * 1000000n },  // 10xym固定値
   duration: new sdkSymbol.models.BlockDuration(480n),         // ロック有効期限
   hash: facade.hashTransaction(aggregateTx)                   // アグリゲートトランザクションのハッシュ値を登録
@@ -374,18 +360,11 @@ await txRepo.announce(signedLockTx).toPromise();
 #### v3
 
 ```js
-// v3.2.0 暫定対応（コミットf183132で修正されてるはず）
-// v3.2.0 では、facade.network.fromDatetime()でネットワークのタイムスタンプを取得すると、内部処理でオーバーフローしてエラーとなってしまう
-// このため、事前にネットワークのタイムスタンプを算出しておく
-differenceMilliseconds = (new Date()).getTime() - facade.network.datetimeConverter.epoch.getTime();
-networkTimestamp = new sdkSymbol.NetworkTimestamp(Math.trunc(differenceMilliseconds / facade.network.datetimeConverter.timeUnits))
-
 // シークレットロックTx作成
 lockTx = facade.transactionFactory.create({
   type: 'secret_lock_transaction_v1',   // Txタイプ:シークレットロックTx
   signerPublicKey: aliceKey.publicKey,  // 署名者公開鍵
-//  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
-  deadline: networkTimestamp.addHours(2).timestamp, //Deadline:有効期限
+  deadline: facade.network.fromDatetime(new Date()).addHours(2).timestamp, //Deadline:有効期限
   mosaic: { mosaicId: namespaceId, amount: 1000000n },        // ロックするモザイク
   duration: new sdkSymbol.models.BlockDuration(480n),         // ロック期間(ブロック数)
   hashAlgorithm: sdkSymbol.models.LockHashAlgorithm.SHA3_256, // ロックキーワード生成に使用したアルゴリズム
@@ -516,18 +495,11 @@ await txRepo.announce(signedProofTx).toPromise();
 #### v3
 
 ```js
-// v3.2.0 暫定対応（コミットf183132で修正されてるはず）
-// v3.2.0 では、facade.network.fromDatetime()でネットワークのタイムスタンプを取得すると、内部処理でオーバーフローしてエラーとなってしまう
-// このため、事前にネットワークのタイムスタンプを算出しておく
-differenceMilliseconds = (new Date()).getTime() - facade.network.datetimeConverter.epoch.getTime();
-networkTimestamp = new sdkSymbol.NetworkTimestamp(Math.trunc(differenceMilliseconds / facade.network.datetimeConverter.timeUnits))
-
 // シークレットプルーフTx作成
 proofTx = facade.transactionFactory.create({
   type: 'secret_proof_transaction_v1',  // Txタイプ:シークレットプルーフTx
   signerPublicKey: bobKey.publicKey,    // 署名者公開鍵
-//  deadline: facade.network.fromDatetime(Date.now()).addHours(2).timestamp, //Deadline:有効期限
-  deadline: networkTimestamp.addHours(2).timestamp, //Deadline:有効期限
+  deadline: facade.network.fromDatetime(new Date()).addHours(2).timestamp, //Deadline:有効期限
   hashAlgorithm: sdkSymbol.models.LockHashAlgorithm.SHA3_256, // ロックキーワード生成に使用したアルゴリズム
   secret: secret,                                             // ロックキーワード
   recipientAddress: bobAddress,                               // 解除アカウント（受信アカウント）
