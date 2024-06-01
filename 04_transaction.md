@@ -48,9 +48,8 @@ console.log(bob.address);
 #### v3
 
 ```js
-bobKey = new sdkSymbol.KeyPair(sdkCore.PrivateKey.random());
-bobAddress = facade.network.publicKeyToAddress(bobKey.publicKey);
-console.log(bobAddress.toString());
+bob = facade.createAccount(sdkCore.PrivateKey.random());
+console.log(bob.address.toString());
 ```
 
 ```js
@@ -73,6 +72,38 @@ tx = sym.TransferTransaction.create(
 
 #### v3
 
+v3 では `Descriptor` によりトランザクションのタイプや必要な情報を指定します。
+
+```js
+messageData = "\0Hello, Symbol!"; // 平文メッセージ
+
+// トランザクション Descriptor 設定
+descriptor = new sdkSymbol.descriptors.TransferTransactionV1Descriptor(  // Txタイプ:転送Tx
+  bob.address,      // 受取アドレス
+  [
+    //// 1XYM送金
+    // new sdkSymbol.descriptors.UnresolvedMosaicDescriptor(
+    //   new sdkSymbol.models.UnresolvedMosaicId(0x72C0212E67A08BCEn),
+    //   new sdkSymbol.models.Amount(1000000n)
+    // )
+  ],
+  messageData       // メッセージ
+);
+
+tx = facade.createTransactionFromTypedDescriptor(
+  descriptor,       // トランザクション Descriptor 設定
+  alice.publicKey,  // 署名者公開鍵
+  100,              // 手数料乗数
+  60 * 60 * 2       // Deadline:有効期限(秒単位)
+);
+console.log(tx);
+```
+
+<details><summary> Descriptor 実装前 (symbol-sdk v3.2.1 まで)</summary>
+
+v3.2.1 までは `Descriptor` が無く、トランザクションの情報を Object 型で指定してトランザクションを作成する必要がありました。
+v3.2.2 以降も Object 型で指定して作成することはできますが、タイプ名の誤りやキー指定誤り等のリスクをなくすため、以降は `Descriptor` を利用してコードを記述します。
+
 ```js
 messageData = new Uint8Array([0x00,...(new TextEncoder('utf-8')).encode('Hello, Symbol!')]); //　平文メッセージ
 tx = facade.transactionFactory.create({
@@ -89,10 +120,12 @@ tx.fee = new sdkSymbol.models.Amount(BigInt(tx.size * 100)); //手数料
 console.log(tx);
 ```
 
+</details>
+
 各設定項目について説明します。
 
 #### 有効期限
-sdkではデフォルトで2時間後に設定されます。
+sdk v2 ではデフォルトで2時間後に設定されます。
 最大6時間まで指定可能です。
 
 #### v2
@@ -102,6 +135,21 @@ sym.Deadline.create(epochAdjustment,6)
 ```
 
 #### v3
+
+`facade.createTransactionFromTypedDescriptor()` の第4引数に秒単位で指定します。
+
+```js
+tx = facade.createTransactionFromTypedDescriptor(
+  ,           // Descriptor
+  ,           // 署名者公開鍵
+  ,           // 手数料乗数
+  60 * 60 * 6 // Deadline:有効期限(秒単位)
+);
+```
+
+<details><summary> createTransactionFromTypedDescriptor() 実装前 (symbol-sdk v3.2.1 まで)</summary>
+
+v3.2.1 までは `facade.network.fromDatetime()` を利用して有効期間を指定していました。
 
 ```js
 facade.network.fromDatetime(new Date()).addHours(6).timestamp
@@ -118,6 +166,8 @@ differenceMilliseconds = (new Date()).getTime() - facade.network.datetimeConvert
 networkTimestamp = new sdkSymbol.NetworkTimestamp(Math.trunc(differenceMilliseconds / facade.network.datetimeConverter.timeUnits));
 networkTimestamp.addHours(6).timestamp;
 ```
+
+</details>
 
 </details>
 
@@ -149,11 +199,30 @@ sym.PlainMessage.create("Hello Symbol!")
 
 #### v3
 
-v3 では先頭に平文メッセージを表すメッセージタイプ `0x00` を付加する必要があります。
+v3 では、平文メッセージの場合は文字列そのままで指定することができます。
 
 ```js
-messageData = new Uint8Array([0x00,...(new TextEncoder('utf-8')).encode('Hello, Symbol!')]);
+messageData = 'Hello, Symbol!';
 ```
+
+先頭にメッセージタイプ `0x00` を付加する場合は以下のように指定します。
+
+```js
+messageData = '\0Hello, Symbol!';
+```
+
+エクスプローラーやデスクトップウォレットはこのフラグで判別してメッセージを表示しています。
+
+<details><summary>symbol-sdk v3.2.1 まで</summary>
+
+v3.2.1 までは他のメッセージタイプと同様、 Uint8Array 型で指定する必要があります。
+v3.2.2 以降も Uint8Array 型で指定できます。
+
+```js
+messageData = new Uint8Array(new TextEncoder('utf-8').encode('Hello, Symbol!'));
+```
+
+</details>
 
 ##### 暗号文メッセージ
 
@@ -172,9 +241,7 @@ EncryptedMessageを使用すると、「指定したメッセージが暗号化�
 `MessageEncoder` を使用して暗号化すると、自動で暗号文メッセージを表すメッセージタイプ `0x01` が付加されます。
 
 ```js
-message = 'Hello Symbol!';
-aliceMsgEncoder = new sdkSymbol.MessageEncoder(aliceKey);
-messageData = aliceMsgEncoder.encode(bobKey.publicKey, new TextEncoder().encode(message));
+messageData = alice.messageEncoder().encode(bob.publicKey, new TextEncoder().encode('Hello Symbol!'));
 ```
 
 ##### 生データ
@@ -187,7 +254,7 @@ sym.RawMessage.create(uint8Arrays[i])
 
 #### v3
 
-v3 では先頭に生データを表すメッセージタイプ `0xFF` を付加する必要があります。
+v3 では先頭に生データを表すメッセージタイプ `0xFF` を付加します。
 
 ```js
 messageData = new Uint8Array([0xFF,...(new TextEncoder('utf-8')).encode('Hello, Symbol!')]);
@@ -218,12 +285,15 @@ tx = sym.TransferTransaction.create(
 
 #### v3
 
+`facade.createTransactionFromTypedDescriptor()` の第3引数で指定します。
+
 ```js
-tx = facade.transactionFactory.create({
-  type: 'transfer_transaction_v1',      // Txタイプ:転送Tx
-  // 省略
-});
-tx.fee = new sdkSymbol.models.Amount(BigInt(tx.size * 100)); //手数料
+tx = facade.createTransactionFromTypedDescriptor(
+  ,     // Descriptor
+  ,     // 署名者公開鍵
+  100,  // 手数料乗数
+        // Deadline:有効期限(秒単位)
+);
 ```
 
 ##### maxFee = 17600 として指定する方法
@@ -241,11 +311,10 @@ tx = sym.TransferTransaction.create(
 #### v3
 
 ```js
-tx = facade.transactionFactory.create({
-  type: 'transfer_transaction_v1',  // Txタイプ:転送Tx
-  fee: 17600n,                      // 手数料
+tx = facade.createTransactionFromTypedDescriptor(
   // 省略
-});
+);
+tx.fee = new sdkSymbol.models.Amount(BigInt(17600)); //手数料
 ```
 
 本書では以後、feeMultiprier = 100として指定する方法で統一して説明します。
@@ -287,8 +356,8 @@ generationHash値はそのブロックチェーンネットワークを一意に
 #### v3
 
 ```js
-sig = facade.signTransaction(aliceKey, tx);
-jsonPayload = facade.transactionFactory.constructor.attachSignature(tx, sig);
+sig = alice.signTransaction(tx);
+jsonPayload = facade.transactionFactory.static.attachSignature(tx, sig);
 ```
 ###### 出力例
 ```js
@@ -642,7 +711,7 @@ MessageTypeは以下の通りです。
 
 ```js
 params = new URLSearchParams({
-  "address": aliceAddress.toString(),
+  "address": alice.address.toString(),
   "embedded": true,
 });
 result = await fetch(
@@ -728,10 +797,9 @@ console.log(rawMessage);
 
 ```js
 message = 'Hello Symbol!';
-plainMessage = new Uint8Array([0x00,...(new TextEncoder('utf-8')).encode('Hello, Symbol!')]);
+plainMessage = new Uint8Array(new TextEncoder('utf-8').encode('\0Hello, Symbol!'));
 console.log(plainMessage);
-aliceMsgEncoder = new sdkSymbol.MessageEncoder(aliceKey);
-encryptedMessage = aliceMsgEncoder.encode(bobKey.publicKey, new TextEncoder().encode(message));
+encryptedMessage = alice.messageEncoder().encode(bob.publicKey, new TextEncoder().encode(message));
 console.log(encryptedMessage);
 rawMessage = new Uint8Array([0xFF, 0x10, 0x20, 0x30]);
 console.log(rawMessage);
@@ -797,25 +865,26 @@ console.log(signedTx.hash);
 
 ```js
 // 暗号化メッセージの作成
-aliceMsgEncoder = new sdkSymbol.MessageEncoder(aliceKey);
-encryptedMessage = aliceMsgEncoder.encode(bobKey.publicKey, new TextEncoder().encode("Hello Symbol!"));
+encryptedMessage = alice.messageEncoder().encode(bob.publicKey, new TextEncoder().encode("Hello Symbol!"));
+
+// トランザクション Descriptor 設定
+descriptor = new sdkSymbol.descriptors.TransferTransactionV1Descriptor(  // Txタイプ:転送Tx
+  bob.address,      // 受取アドレス
+  [],               // 送信モザイク
+  messageData       // メッセージ
+);
 
 // Tx 作成
-tx = facade.transactionFactory.create({
-  type: 'transfer_transaction_v1',      // Txタイプ:転送Tx
-  signerPublicKey: aliceKey.publicKey,  // 署名者公開鍵
-  deadline: facade.network.fromDatetime(new Date()).addHours(2).timestamp, //Deadline:有効期限
-  recipientAddress: bobAddress.toString(),
-  mosaics: [
-  // { mosaicId: 0x72C0212E67A08BCEn, amount: 1000000n } // 1XYM送金
-  ],
-  message: encryptedMessage
-});
-tx.fee = new sdkSymbol.models.Amount(BigInt(tx.size * 100)); //手数料
+tx = facade.createTransactionFromTypedDescriptor(
+  descriptor,       // トランザクション Descriptor 設定
+  alice.publicKey,  // 署名者公開鍵
+  100,              // 手数料乗数
+  60 * 60 * 2       // Deadline:有効期限(秒単位)
+);
 
 // 署名とアナウンス
-sig = facade.signTransaction(aliceKey, tx);
-jsonPayload = facade.transactionFactory.constructor.attachSignature(tx, sig);
+sig = alice.signTransaction(tx);
+jsonPayload = facade.transactionFactory.static.attachSignature(tx, sig);
 res = await fetch(
   new URL('/transactions', NODE),
   {
@@ -867,8 +936,7 @@ txInfo = await fetch(
 });
 
 // メッセージを復号化して表示
-bobMsgEncoder = new sdkSymbol.MessageEncoder(bobKey);
-console.log(bobMsgEncoder.tryDecode(aliceKey.publicKey, Buffer.from(txInfo.transaction.message, "hex")));
+console.log(bob.messageEncoder().tryDecode(alice.publicKey, Buffer.from(txInfo.transaction.message, "hex")));
 ```
 ```js
 > (2) [false, Uint8Array(82)]
@@ -886,8 +954,7 @@ v2 で作成したメッセージを v3 で読み込むためには、16進数�
 messageV2 = txInfo.transaction.message.substr(2); // メッセージタイプを取り除く
 hex1 = Buffer.from(messageV2, "hex");             // 1回目の16進数文字列から戻す変換
 hex2 = Buffer.from(hex1.toString(), "hex");       // 2回目の16進数文字列から戻す変換
-bobMsgEncoder = new sdkSymbol.MessageEncoder(bobKey);
-console.log(bobMsgEncoder.tryDecode(aliceKey.publicKey, new Uint8Array([0x01, ...hex2])));  // メッセージタイプ 0x01 を付けてメッセージを復号する
+console.log(bob.messageEncoder().tryDecode(alice.publicKey, new Uint8Array([0x01, ...hex2])));  // メッセージタイプ 0x01 を付けてメッセージを復号する
 ```
 
 ```js
@@ -901,7 +968,7 @@ console.log(bobMsgEncoder.tryDecode(aliceKey.publicKey, new Uint8Array([0x01, ..
 #### v3
 
 ```js
-bobMsgEncoder.tryDecodeDeprecated(aliceKey.publicKey, Buffer.from(txInfo.transaction.message, "hex"));
+bob.messageEncoder().tryDecodeDeprecated(alice.publicKey, Buffer.from(txInfo.transaction.message, "hex"));
 ```
 
 ### v2 で読み込めるように v3 でメッセージを作成する
@@ -912,8 +979,7 @@ v2 で読み込めるようにするため、 v3 でメッセージを作成す�
 
 ```js
 // 暗号化メッセージの作成
-aliceMsgEncoder = new sdkSymbol.MessageEncoder(aliceKey);
-encrypted = aliceMsgEncoder.encode(bobKey.publicKey, new TextEncoder().encode("Hello Symbol!"));
+encrypted = alice.messageEncoder().encode(bob.publicKey, new TextEncoder().encode("Hello Symbol!"));
 hex1 = Buffer.from(encrypted).subarray(1).toString("hex").toUpperCase();
 encryptedMessage = new Uint8Array([0x01, ...(new TextEncoder().encode(hex1))]);
 // Tx作成、アナウンス
@@ -935,7 +1001,7 @@ console.log(bob.decryptMessage(txInfo.message, alice.publicAccount));
 #### v3
 
 ```js
-aliceMsgEncoder.encodeDeprecated(bobKey.publicKey, new TextEncoder().encode("Hello Symbol!"));
+alice.messageEncoder().encodeDeprecated(bob.publicKey, new TextEncoder().encode("Hello Symbol!"));
 ```
 
 ## 4.6 アグリゲートトランザクション
@@ -985,46 +1051,51 @@ await txRepo.announce(signedTx).toPromise();
 #### v3
 
 ```js
-bobKey = new sdkSymbol.KeyPair(sdkCore.PrivateKey.random());
-bobAddress = facade.network.publicKeyToAddress(bobKey.publicKey);
-carolKey = new sdkSymbol.KeyPair(sdkCore.PrivateKey.random());
-carolAddress = facade.network.publicKeyToAddress(carolKey.publicKey);
+bob = facade.createAccount(sdkCore.PrivateKey.random());
+carol = facade.createAccount(sdkCore.PrivateKey.random());
 
 // アグリゲートTxに含めるTxを作成
-innerTx1 = facade.transactionFactory.createEmbedded({
-  type: 'transfer_transaction_v1',      // Txタイプ:転送Tx
-  signerPublicKey: aliceKey.publicKey,  // 署名者公開鍵
-  recipientAddress: bobAddress.toString(),
-  message: new Uint8Array([0x00,...(new TextEncoder('utf-8')).encode('tx1')]) // 平文メッセージ
-});
+descriptor1 = new sdkSymbol.descriptors.TransferTransactionV1Descriptor(  // Txタイプ:転送Tx
+  bob.address,      // 送信先アドレス
+  [],               // 送信モザイク
+  'tx1'             // 平文メッセージ
+);
+innerTx1 = facade.createEmbeddedTransactionFromTypedDescriptor(
+  descriptor1,      // トランザクション Descriptor 設定
+  alice.publicKey,  // 署名者公開鍵
+);
 
-innerTx2 = facade.transactionFactory.createEmbedded({
-  type: 'transfer_transaction_v1',      // Txタイプ:転送Tx
-  signerPublicKey: aliceKey.publicKey,  // 署名者公開鍵
-  recipientAddress: carolAddress.toString(),
-  message: new Uint8Array([0x00,...(new TextEncoder('utf-8')).encode('tx2')]) // 平文メッセージ
-});
+descriptor2 = new sdkSymbol.descriptors.TransferTransactionV1Descriptor(  // Txタイプ:転送Tx
+  carol.address,    // 送信先アドレス
+  [],               // 送信モザイク
+  'tx2'             // 平文メッセージ
+);
+innerTx2 = facade.createEmbeddedTransactionFromTypedDescriptor(
+  descriptor2,      // トランザクション Descriptor 設定
+  alice.publicKey,  // 署名者公開鍵
+);
 
-// マークルハッシュの算出
 embeddedTransactions = [
   innerTx1,
   innerTx2
 ];
-merkleHash = facade.constructor.hashEmbeddedTransactions(embeddedTransactions);
 
 // アグリゲートTx作成
-aggregateTx = facade.transactionFactory.create({
-  type: 'aggregate_complete_transaction_v2',
-  signerPublicKey: aliceKey.publicKey,  // 署名者公開鍵
-  deadline: facade.network.fromDatetime(new Date()).addHours(2).timestamp, //Deadline:有効期限
-  transactionsHash: merkleHash,
-  transactions: embeddedTransactions
-});
-aggregateTx.fee = new sdkSymbol.models.Amount(1000000n); //手数料
+descriptor = new sdkSymbol.descriptors.AggregateCompleteTransactionV2Descriptor(
+  facade.static.hashEmbeddedTransactions(embeddedTransactions),
+  embeddedTransactions
+);
+aggregateTx = facade.createTransactionFromTypedDescriptor(
+  descriptor,       // トランザクション Descriptor 設定
+  alice.publicKey,  // 署名者公開鍵
+  100,              // 手数料乗数
+  60 * 60 * 2,      // Deadline:有効期限(秒単位)
+  0                 // 連署者数
+);
 
 // 署名とアナウンス
-sig = facade.signTransaction(aliceKey, aggregateTx);
-jsonPayload = facade.transactionFactory.constructor.attachSignature(aggregateTx, sig);
+sig = alice.signTransaction(aggregateTx);
+jsonPayload = facade.transactionFactory.static.attachSignature(aggregateTx, sig);
 await fetch(
   new URL('/transactions', NODE),
   {
@@ -1064,6 +1135,22 @@ aggregateTx = sym.AggregateTransaction.createComplete(
 
 #### v3
 
+`facade.createTransactionFromTypedDescriptor()` の第3引数に feeMultiprier、第5引数に連署者の数を指定します。
+
+```js
+tx = facade.createTransactionFromTypedDescriptor(
+  ,     // Descriptor
+  ,     // 署名者公開鍵
+  100,  // 手数料乗数
+  ,     // Deadline:有効期限(秒単位)
+  1     // 必要な連署者の数を指定
+);
+```
+
+<details><summary> createTransactionFromTypedDescriptor() 実装前 (symbol-sdk v3.2.1 まで)</summary>
+
+v3.2.1 までは連署により追加される連署情報のサイズを算出し、最終的なTxサイズから手数料を設定する必要があります。
+
 ```js
 // アグリゲートTx作成
 aggregateTx = facade.transactionFactory.create({
@@ -1081,6 +1168,8 @@ sizePerCosignature = 8 + 32 + 64;
 calculatedSize = aggregateTx.size - aggregateTx.cosignatures.length * sizePerCosignature + calculatedCosignatures * sizePerCosignature;
 aggregateTx.fee = new sdkSymbol.models.Amount(BigInt(calculatedSize * 100)); //手数料
 ```
+
+</details>
 
 ## 4.7 現場で使えるヒント
 

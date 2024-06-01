@@ -28,7 +28,33 @@ networkTypeは以下の通りです。
 
 #### v3
 
-v3 では `Account` クラスが無いため、秘密鍵・公開鍵の鍵セットとアドレスを別々に作成する必要あります。
+```js
+alice = facade.createAccount(sdkCore.PrivateKey.random());
+console.log(alice);
+```
+
+###### 出力例
+
+```js
+> SymbolAccount
+  > address: Address
+      bytes: Uint8Array(24)
+  > keyPair: KeyPair
+    > publicKey: PublicKey
+        bytes: Uint8Array(32)
+    > privateKey: PrivateKey
+        bytes: Uint8Array(32)
+  > publicKey: PublicKey
+      bytes: Uint8Array(32)
+  > _facade: SymbolFacade
+      network: Network
+      transactionFactory: TransactionFactory
+```
+
+<details><summary> SymbolAccount クラス実装前 (symbol-sdk v3.2.1 まで)</summary>
+
+v3.2.1 までは `SymbolAccount` クラスが無いため、秘密鍵・公開鍵の鍵セットとアドレスを別々に作成する必要ありました。
+v3.2.2 以降も別々に作成することはできますが、データを別々に管理する手間やリスクを考慮し、以降は `SymbolAccount` クラスを利用してコードを記述します。
 
 ```js
 aliceKey = new sdkSymbol.KeyPair(sdkCore.PrivateKey.random());
@@ -46,6 +72,8 @@ console.log(aliceAddress);
 > Address {bytes: Uint8Array(24)}
 ```
 
+</details>
+
 ### 秘密鍵と公開鍵の導出
 
 #### v2
@@ -58,8 +86,8 @@ console.log(alice.publicKey);
 #### v3
 
 ```js
-console.log(aliceKey.privateKey.toString());
-console.log(aliceKey.publicKey.toString());
+console.log(alice.keyPair.privateKey.toString());
+console.log(alice.publicKey.toString());
 ```
 
 ```
@@ -84,7 +112,7 @@ console.log(aliceRawAddress);
 #### v3
 
 ```js
-aliceRawAddress = aliceAddress.toString();
+aliceRawAddress = alice.address.toString();
 console.log(aliceRawAddress);
 ```
 
@@ -108,8 +136,7 @@ alice = sym.Account.createFromPrivateKey(
 #### v3
 
 ```js
-aliceKey = new sdkSymbol.KeyPair(new sdkCore.PrivateKey("1E9139CC1580B4AED6A1FE110085281D4982ED0D89CE07F3380EB83069B1****"));
-aliceAddress = facade.network.publicKeyToAddress(aliceKey.publicKey);
+alice = facade.createAccount(new sdkCore.PrivateKey("1E9139CC1580B4AED6A1FE110085281D4982ED0D89CE07F3380EB83069B1****"));
 ```
 
 ### 公開鍵クラスの生成
@@ -134,15 +161,20 @@ console.log(alicePublicAccount);
 #### v3
 
 ```js
-alicePublicAccount = new sdkCore.PublicKey(Uint8Array.from(Buffer.from("D4933FC1E4C56F9DF9314E9E0533173E1AB727BDB2A04B59F048124E93BEFBD2", "hex")));
+alicePublicAccount = facade.createPublicAccount(new sdkCore.PublicKey("D4933FC1E4C56F9DF9314E9E0533173E1AB727BDB2A04B59F048124E93BEFBD2"));
 console.log(alicePublicAccount);
-console.log(alicePublicAccount.toString());
 ```
 
 ###### 出力例
 ```js
-> PublicKey {bytes: Uint8Array(32)}
-> D4933FC1E4C56F9DF9314E9E0533173E1AB727BDB2A04B59F048124E93BEFBD2
+> SymbolPublicAccount
+  > address: Address
+      bytes: Uint8Array(24)
+  > publicKey: PublicKey
+      bytes: Uint8Array(32)
+  > _facade: SymbolFacade
+      network: Network
+      transactionFactory: TransactionFactory
 ```
 
 ### アドレスクラスの生成
@@ -358,7 +390,7 @@ bobPublicAccount = bob.publicAccount;
 #### v3
 
 ```js
-bobKey = new sdkSymbol.KeyPair(sdkCore.PrivateKey.random());
+bob = facade.createAccount(sdkCore.PrivateKey.random());
 ```
 
 #### 暗号化
@@ -385,8 +417,7 @@ console.log(encryptedMessage);
 
 ```js
 message = 'Hello Symbol!';
-aliceMsgEncoder = new sdkSymbol.MessageEncoder(aliceKey);
-encryptedMessage = aliceMsgEncoder.encode(bobKey.publicKey, new TextEncoder().encode(message));
+encryptedMessage = alice.messageEncoder().encode(bob.publicKey, new TextEncoder().encode(message));
 console.log(Buffer.from(encryptedMessage).toString("hex").toUpperCase());
 ```
 
@@ -411,8 +442,7 @@ console.log(decryptMessage);
 #### v3
 
 ```js
-bobMsgEncoder = new sdkSymbol.MessageEncoder(bobKey);
-decryptMessageData = bobMsgEncoder.tryDecode(aliceKey.publicKey, Uint8Array.from(Buffer.from("0167AF68C3E7EFBD7048F6E9140FAA14256B64DD19FD0708EDCF17758A81FCC00084D869D6F1434A77AF", "hex"))); // 暗号化時のデータに置き換えてください
+decryptMessageData = bob.messageEncoder().tryDecode(alice.publicKey, Uint8Array.from(Buffer.from("0167AF68C3E7EFBD7048F6E9140FAA14256B64DD19FD0708EDCF17758A81FCC00084D869D6F1434A77AF", "hex"))); // 暗号化時のデータに置き換えてください
 console.log(decryptMessageData);
 if (decryptMessageData.isDecoded) {
   decryptMessage = new TextDecoder().decode(decryptMessageData.message);
@@ -469,7 +499,7 @@ console.log(signature);
 
 ```js
 payload = Buffer.from("Hello Symbol!", 'utf-8');
-signature = aliceKey.sign(payload);
+signature = alice.keyPair.sign(payload);
 console.log(signature.toString());
 ```
 
@@ -493,7 +523,7 @@ console.log(isVerified);
 #### v3
 
 ```js
-v = new sdkSymbol.Verifier(aliceKey.publicKey);
+v = new sdkSymbol.Verifier(alice.publicKey);
 isVerified = v.verify(Buffer.from("Hello Symbol!", 'utf-8'), signature);
 console.log(isVerified);
 ```

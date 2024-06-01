@@ -138,7 +138,7 @@ listener.open().then(() => {
 
 ```js
 // 承認トランザクション検知時の処理
-channelName = ListenerChannelName.confirmedAdded + "/" + aliceAddress.toString();
+channelName = ListenerChannelName.confirmedAdded + "/" + alice.address.toString();
 addCallback(channelName, (tx) => {
   console.log("confirmed added", tx);
 });
@@ -149,7 +149,7 @@ listener.send(JSON.stringify({
 }));
 
 // 未承認トランザクション検知時の処理
-channelName = ListenerChannelName.unconfirmedAdded + "/" + aliceAddress.toString();
+channelName = ListenerChannelName.unconfirmedAdded + "/" + alice.address.toString();
 addCallback(channelName, (tx) => {
   console.log("unconfirmed added", tx);
 });
@@ -315,7 +315,7 @@ listener.open().then(() => {
 
 ```js
 // 署名が必要なアグリゲートボンデッドトランザクション発生検知時の処理
-channelName = ListenerChannelName.partialAdded + "/" + aliceAddress.toString();
+channelName = ListenerChannelName.partialAdded + "/" + alice.address.toString();
 addCallback(channelName, (tx) => {
   console.log("partial added", tx);
 });
@@ -695,14 +695,10 @@ const statusChanged = function(address,hash){
 // 連署実行
 async function exeAggregateBondedCosignature(aggTx){
   // インナートランザクションの署名者に自分が指定されている場合
-  if (aggTx.transaction.transactions.find(inTx => inTx.transaction.signerPublicKey === bobKey.publicKey.toString()) === undefined) {
+  if (aggTx.transaction.transactions.find(inTx => inTx.transaction.signerPublicKey === bob.publicKey.toString()) === undefined) {
     // Aliceのトランザクションで署名
-    cosignature = new sdkSymbol.models.DetachedCosignature();
+    cosignature = bob.cosignTransaction(aggregateTx, true);
     signTxHash = new sdkCore.Hash256(sdkCore.utils.hexToUint8(aggTx.meta.hash));
-    cosignature.parentHash = signTxHash;
-    cosignature.version = 0n;
-    cosignature.signerPublicKey = bobKey.publicKey;
-    cosignature.signature = new sdkSymbol.models.Signature(bobKey.sign(signTxHash.bytes).bytes);
 
     // アナウンス
     body= {
@@ -723,7 +719,7 @@ async function exeAggregateBondedCosignature(aggTx){
     .then((json) => {
       return json;
     });
-    statusChanged(bobAddress, signTxHash);
+    statusChanged(bob.address, signTxHash);
   }
 }
 
@@ -748,20 +744,20 @@ bondedSubscribe = async function(tx){
     return json[0];
   });
   if (partialTx === undefined){
-    cosole.error("get tx info failed.");
+    console.error("get tx info failed.");
     return;
   }
 
   // 署名済みか確認
   if (!partialTx.transaction.hasOwnProperty("cosignatures")){
-    cosole.log("not aggregate tx.");
+    console.log("not aggregate tx.");
     return;
   }
   bobCosignature = partialTx.transaction.cosignatures.find(c => {
-    return c.signerPublicKey === bobKey.publicKey.toString();
+    return c.signerPublicKey === bob.publicKey.toString();
   });
-  if (bobCosignature !== undefined && partialTx.transaction.signerPublicKey === bobKey.publicKey.toString()){
-    cosole.log("already signed.");
+  if (bobCosignature !== undefined && partialTx.transaction.signerPublicKey === bob.publicKey.toString()){
+    console.log("already signed.");
     return;
   }
 
@@ -770,7 +766,7 @@ bondedSubscribe = async function(tx){
 }
 
 // 署名が必要なアグリゲートボンデッドトランザクション発生検知時の処理
-channelName = ListenerChannelName.partialAdded + "/" + aliceAddress.toString();
+channelName = ListenerChannelName.partialAdded + "/" + alice.address.toString();
 addCallback(channelName, async (tx) => {
   bondedSubscribe(tx);
 });
@@ -809,7 +805,7 @@ async function getAllPartialTxes(address){
 }
 
 // 初期表示時
-(await getAllPartialTxes(bobAddress)).forEach(partialTx => {
+(await getAllPartialTxes(bob.address)).forEach(partialTx => {
   bondedSubscribe(partialTx);
 });
 

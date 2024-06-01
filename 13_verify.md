@@ -81,7 +81,7 @@ console.log(tx);
 #### v3
 
 ```js
-tx = sdkSymbol.models.TransactionFactory.deserialize(sdkCore.utils.hexToUint8(payload));
+tx = facade.transactionFactory.static.deserialize(sdkCore.utils.hexToUint8(payload));
 hash = facade.hashTransaction(tx);
 console.log(hash);
 console.log(tx);
@@ -991,8 +991,8 @@ hasher.update(srcAddress);
 hasher.update(targetAddress);
 hasher.update(sym.Convert.hexToUint8Reverse("9772B71B058127D7")); // scopeKey
 hasher.update(sym.Convert.hexToUint8Reverse("0000000000000000")); // targetId
-hasher.update(Uint8Array.from([sym.MetadataType.Account])); //account
-value = Buffer.from("test");
+hasher.update(Uint8Array.from([sym.MetadataType.Account]));       // account
+value = Buffer.from("test");                                      // メタデータの値を指定
 hasher.update(cat.GeneratorUtils.uintToBuffer(value.length, 2)); 
 hasher.update(value); 
 stateHash = hasher.hex();
@@ -1035,10 +1035,10 @@ version = 1;
 hasher.update(Buffer.from(version.toString(16).padStart(2 * 2, '0'),'hex').reverse()); //version
 hasher.update(srcAddress);
 hasher.update(targetAddress);
-hasher.update(sdkCore.utils.hexToUint8("9772B71B058127D7").reverse()); // scopeKey, メタデータキーを指定
-hasher.update(sdkCore.utils.hexToUint8("0000000000000000").reverse()); // targetId
-hasher.update(Uint8Array.from([0])); //account
-value = Buffer.from("test");
+hasher.update(sdkCore.utils.hexToUint8("9772B71B058127D7").reverse());  // scopeKey, メタデータキーを指定
+hasher.update(sdkCore.utils.hexToUint8("0000000000000000").reverse());  // targetId
+hasher.update(Uint8Array.from([0]));                                    // account
+value = Buffer.from("test");                                            // メタデータの値を指定
 hasher.update(Buffer.from(value.length.toString(16).padStart(2 * 2, '0'),'hex').reverse());
 hasher.update(value); 
 stateHash = sdkCore.utils.uint8ToHex(hasher.digest());

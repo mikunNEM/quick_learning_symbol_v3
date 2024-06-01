@@ -105,19 +105,23 @@ await txRepo.announce(signedTx).toPromise();
 name = "xembook";  // 作成するルートネームスペース
 
 // Tx作成
-tx = facade.transactionFactory.create({
-  type: 'namespace_registration_transaction_v1',        // Txタイプ:ネームスペース登録Tx
-  signerPublicKey: aliceKey.publicKey,                  // 署名者公開鍵
-  deadline: facade.network.fromDatetime(new Date()).addHours(2).timestamp, //Deadline:有効期限
-  duration: new sdkSymbol.models.BlockDuration(86400n), // duration:有効期限
-  registrationType: sdkSymbol.models.NamespaceRegistrationType.ROOT,
-  name: (new TextEncoder('utf-8')).encode(name)
-});
-tx.fee = new sdkSymbol.models.Amount(BigInt(tx.size * 100)); //手数料
+descriptor = new sdkSymbol.descriptors.NamespaceRegistrationTransactionV1Descriptor(  // Txタイプ:ネームスペース登録Tx
+  new sdkSymbol.models.NamespaceId(sdkSymbol.generateNamespaceId(name)),  // ネームスペースID
+  sdkSymbol.models.NamespaceRegistrationType.ROOT,  // 登録タイプ : ルートネームスペース
+  new sdkSymbol.models.BlockDuration(86400n),       // duration:レンタル期間
+  undefined,                                        // 親ネームスペース (ルートの場合は省略可)
+  name                                              // ネームスペース
+);
+tx = facade.createTransactionFromTypedDescriptor(
+  descriptor,       // トランザクション Descriptor 設定
+  alice.publicKey,  // 署名者公開鍵
+  100,              // 手数料乗数
+  60 * 60 * 2       // Deadline:有効期限(秒単位)
+);
 
 // 署名とアナウンス
-sig = facade.signTransaction(aliceKey, tx);
-jsonPayload = facade.transactionFactory.constructor.attachSignature(tx, sig);
+sig = alice.signTransaction(tx);
+jsonPayload = facade.transactionFactory.static.attachSignature(tx, sig);
 await fetch(
   new URL('/transactions', NODE),
   {
@@ -153,21 +157,23 @@ await txRepo.announce(signedTx).toPromise();
 // ネームスペース設定
 parentNameId = sdkSymbol.generateNamespaceId("xembook"); // 紐づけたいルートネームスペース
 name = "tomato";  // 作成するサブネームスペース
-
-subNamespaceTx = facade.transactionFactory.create({
-  type: 'namespace_registration_transaction_v1',      // Txタイプ:ネームスペース登録Tx
-  signerPublicKey: aliceKey.publicKey,  // 署名者公開鍵
-  deadline: facade.network.fromDatetime(new Date()).addHours(2).timestamp, //Deadline:有効期限
-  duration: new sdkSymbol.models.BlockDuration(86400n), // duration:有効期限
-  parentId: parentNameId,
-  registrationType: sdkSymbol.models.NamespaceRegistrationType.CHILD,
-  name: (new TextEncoder('utf-8')).encode(name)
-});
-subNamespaceTx.fee = new sdkSymbol.models.Amount(BigInt(subNamespaceTx.size * 100)); //手数料
+subNamespaceDescriptor = new sdkSymbol.descriptors.NamespaceRegistrationTransactionV1Descriptor(  // Txタイプ:ネームスペース登録Tx
+  new sdkSymbol.models.NamespaceId(sdkSymbol.generateNamespaceId(name, parentNameId)),            // ネームスペースID
+  sdkSymbol.models.NamespaceRegistrationType.CHILD,   // 登録タイプ : サブネームスペース
+  undefined,                                          // duration:レンタル期間 (サブの場合は省略可)
+  parentNameId,                                       // 親ネームスペースID
+  name                                                // ネームスペース
+);
+subNamespaceTx = facade.createTransactionFromTypedDescriptor(
+  subNamespaceDescriptor, // トランザクション Descriptor 設定
+  alice.publicKey,        // 署名者公開鍵
+  100,                    // 手数料乗数
+  60 * 60 * 2             // Deadline:有効期限(秒単位)
+);
 
 // 署名とアナウンス
-sig = facade.signTransaction(aliceKey, subNamespaceTx);
-jsonPayload = facade.transactionFactory.constructor.attachSignature(subNamespaceTx, sig);
+sig = alice.signTransaction(subNamespaceTx);
+jsonPayload = facade.transactionFactory.static.attachSignature(subNamespaceTx, sig);
 await fetch(
   new URL('/transactions', NODE),
   {
@@ -307,23 +313,26 @@ await txRepo.announce(signedTx).toPromise();
 
 ```js
 // リンクするネームスペースとアドレスの設定
-namespaceId = sdkSymbol.generateNamespaceId("xembook");
+namespaceIds = sdkSymbol.generateNamespacePath("xembook");
+namespaceId = new sdkSymbol.models.NamespaceId(namespaceIds[namespaceIds.length - 1]);
 address = new sdkSymbol.Address("TBIL6D6RURP45YQRWV6Q7YVWIIPLQGLZQFHWFEQ");
 
 // Tx作成
-tx = facade.transactionFactory.create({
-  type: 'address_alias_transaction_v1', // Txタイプ:アドレスエイリアスTx
-  signerPublicKey: aliceKey.publicKey,  // 署名者公開鍵
-  deadline: facade.network.fromDatetime(new Date()).addHours(2).timestamp, //Deadline:有効期限
-  namespaceId: namespaceId,
-  address: address,
-  aliasAction: sdkSymbol.models.AliasAction.LINK
-});
-tx.fee = new sdkSymbol.models.Amount(BigInt(tx.size * 100)); //手数料
+descriptor = new sdkSymbol.descriptors.AddressAliasTransactionV1Descriptor(  // Txタイプ:アドレスエイリアスTx
+  namespaceId,      // ネームスペースID
+  address,          // リンク先アドレス
+  sdkSymbol.models.AliasAction.LINK
+);
+tx = facade.createTransactionFromTypedDescriptor(
+  descriptor,       // トランザクション Descriptor 設定
+  alice.publicKey,  // 署名者公開鍵
+  100,              // 手数料乗数
+  60 * 60 * 2       // Deadline:有効期限(秒単位)
+);
 
 // 署名とアナウンス
-sig = facade.signTransaction(aliceKey, tx);
-jsonPayload = facade.transactionFactory.constructor.attachSignature(tx, sig);
+sig = alice.signTransaction(tx);
+jsonPayload = facade.transactionFactory.static.attachSignature(tx, sig);
 await fetch(
   new URL('/transactions', NODE),
   {
@@ -363,23 +372,25 @@ await txRepo.announce(signedTx).toPromise();
 ```js
 // リンクするネームスペースとモザイクの設定
 namespaceIds = sdkSymbol.generateNamespacePath("xembook.tomato");
-namespaceId = namespaceIds[namespaceIds.length - 1];
+namespaceId = new sdkSymbol.models.NamespaceId(namespaceIds[namespaceIds.length - 1]);
 mosaicId = new sdkSymbol.models.MosaicId(0x3A8416DB2D53xxxxn);
 
 // Tx作成
-tx = facade.transactionFactory.create({
-  type: 'mosaic_alias_transaction_v1',  // Txタイプ:モザイクエイリアスTx
-  signerPublicKey: aliceKey.publicKey,  // 署名者公開鍵
-  deadline: facade.network.fromDatetime(new Date()).addHours(2).timestamp, //Deadline:有効期限
-  namespaceId: namespaceId,
-  mosaicId: mosaicId,
-  aliasAction: sdkSymbol.models.AliasAction.LINK
-});
-tx.fee = new sdkSymbol.models.Amount(BigInt(tx.size * 100)); //手数料
+descriptor = new sdkSymbol.descriptors.MosaicAliasTransactionV1Descriptor(  // Txタイプ:モザイクエイリアスTx
+  namespaceId,      // ネームスペースID
+  mosaicId,         // リンク先モザイク
+  sdkSymbol.models.AliasAction.LINK
+);
+tx = facade.createTransactionFromTypedDescriptor(
+  descriptor,       // トランザクション Descriptor 設定
+  alice.publicKey,  // 署名者公開鍵
+  100,              // 手数料乗数
+  60 * 60 * 2       // Deadline:有効期限(秒単位)
+);
 
 // 署名とアナウンス
-sig = facade.signTransaction(aliceKey, tx);
-jsonPayload = facade.transactionFactory.constructor.attachSignature(tx, sig);
+sig = alice.signTransaction(tx);
+jsonPayload = facade.transactionFactory.static.attachSignature(tx, sig);
 await fetch(
   new URL('/transactions', NODE),
   {
@@ -419,29 +430,28 @@ await txRepo.announce(signedTx).toPromise();
 
 #### v3
 
-v3 ではネームスペースを直接指定できないため、アドレスを特定しないまま操作する場合はデータを加工する必要があります。
-
 ```js
 // UnresolvedAccount 導出
-namespaceId = sdkSymbol.generateNamespaceId("xembook");
-namespaceIdData = sdkCore.utils.hexToUint8(namespaceId.toString(16));
-namespaceIdData.reverse();
-unresolvecAccount = new Uint8Array([networkType + 1, ...namespaceIdData, ...(new Uint8Array(24 - (namespaceIdData.length + 1)))]);
+namespaceIds = sdkSymbol.generateNamespacePath("xembook");
+namespaceId = new sdkSymbol.models.NamespaceId(namespaceIds[namespaceIds.length - 1]);
+unresolvecAccount = sdkSymbol.Address.fromNamespaceId(namespaceId, networkType);
 
 // Tx作成
-tx = facade.transactionFactory.create({
-  type: 'transfer_transaction_v1',      // Txタイプ:転送Tx
-  signerPublicKey: aliceKey.publicKey,  // 署名者公開鍵
-  deadline: facade.network.fromDatetime(new Date()).addHours(2).timestamp, //Deadline:有効期限
-  recipientAddress: unresolvecAccount,  // UnresolvedAccount:未解決アカウントアドレス
-  mosaics: [],
-  message: new Uint8Array()
-});
-tx.fee = new sdkSymbol.models.Amount(BigInt(tx.size * 100)); //手数料
+descriptor = new sdkSymbol.descriptors.TransferTransactionV1Descriptor(  // Txタイプ:転送Tx
+  unresolvecAccount,  // UnresolvedAccount:未解決アカウントアドレス
+  [],
+  new Uint8Array()    // メッセージ
+);
+tx = facade.createTransactionFromTypedDescriptor(
+  descriptor,       // トランザクション Descriptor 設定
+  alice.publicKey,  // 署名者公開鍵
+  100,              // 手数料乗数
+  60 * 60 * 2       // Deadline:有効期限(秒単位)
+);
 
 // 署名とアナウンス
-sig = facade.signTransaction(aliceKey, tx);
-jsonPayload = facade.transactionFactory.constructor.attachSignature(tx, sig);
+sig = alice.signTransaction(tx);
+jsonPayload = facade.transactionFactory.static.attachSignature(tx, sig);
 await fetch(
   new URL('/transactions', NODE),
   {
@@ -486,24 +496,26 @@ namespaceIds = sdkSymbol.generateNamespacePath("xembook.tomato");
 namespaceId = namespaceIds[namespaceIds.length - 1];
 
 // Tx作成
-tx = facade.transactionFactory.create({
-  type: 'transfer_transaction_v1',      // Txタイプ:転送Tx
-  signerPublicKey: aliceKey.publicKey,  // 署名者公開鍵
-  deadline: facade.network.fromDatetime(new Date()).addHours(2).timestamp, //Deadline:有効期限
-  recipientAddress: address,
-  mosaics: [
-    {
-      mosaicId: namespaceId,  // UnresolvedMosaic:未解決モザイク
-      amount: 1n              // 送信量
-    }
+descriptor = new sdkSymbol.descriptors.TransferTransactionV1Descriptor(  // Txタイプ:転送Tx
+  address,          // 受取アドレス
+  [
+    new sdkSymbol.descriptors.UnresolvedMosaicDescriptor(
+      new sdkSymbol.models.UnresolvedMosaicId(namespaceId), // UnresolvedMosaic:未解決モザイク
+      new sdkSymbol.models.Amount(1n)                       // 送信量
+    )
   ],
-  message: new Uint8Array()
-});
-tx.fee = new sdkSymbol.models.Amount(BigInt(tx.size * 100)); // 手数料
+  new Uint8Array()  // メッセージ
+);
+tx = facade.createTransactionFromTypedDescriptor(
+  descriptor,       // トランザクション Descriptor 設定
+  alice.publicKey,  // 署名者公開鍵
+  100,              // 手数料乗数
+  60 * 60 * 2       // Deadline:有効期限(秒単位)
+);
 
 // 署名とアナウンス
-sig = facade.signTransaction(aliceKey, tx);
-jsonPayload = facade.transactionFactory.constructor.attachSignature(tx, sig);
+sig = alice.signTransaction(tx);
+jsonPayload = facade.transactionFactory.static.attachSignature(tx, sig);
 await fetch(
   new URL('/transactions', NODE),
   {
@@ -576,7 +588,8 @@ NamespaceInfo
 #### v3
 
 ```js
-nameId = sdkSymbol.generateNamespaceId("xembook");
+namespaceIds = sdkSymbol.generateNamespacePath("xembook");
+nameId = namespaceIds[namespaceIds.length - 1];
 namespaceInfo = await fetch(
   new URL('/namespaces/' + nameId.toString(16).toUpperCase(), NODE),
   {

@@ -48,15 +48,17 @@ crypto.getRandomValues(array);
 nonce = new sdkSymbol.models.MosaicNonce(array[0] * 0x00000001 + array[1] * 0x00000100 + array[2] * 0x00010000 + array[3] * 0x01000000);
 
 //モザイク定義
-mosaicDefTx = facade.transactionFactory.createEmbedded({
-  type: 'mosaic_definition_transaction_v1',         // Txタイプ:モザイク定義Tx
-  signerPublicKey: aliceKey.publicKey,              // 署名者公開鍵
-  id: new sdkSymbol.models.MosaicId(sdkSymbol.generateMosaicId(aliceAddress, nonce.value)),
-  divisibility: 2,                                  // divisibility:可分性
-  duration: new sdkSymbol.models.BlockDuration(0n), // duration:有効期限
-  nonce: nonce,
-  flags: flags
-});
+mosaicDefDescriptor = new sdkSymbol.descriptors.MosaicDefinitionTransactionV1Descriptor(  // Txタイプ:モザイク定義Tx
+  new sdkSymbol.models.MosaicId(sdkSymbol.generateMosaicId(alice.address, nonce.value)),  // モザイクID
+  new sdkSymbol.models.BlockDuration(0n), // duration:有効期限
+  nonce,  // ナンス
+  flags,  // モザイクフラグ
+  2       // divisibility:可分性
+);
+mosaicDefTx = facade.createEmbeddedTransactionFromTypedDescriptor(
+  mosaicDefDescriptor,  // トランザクション Descriptor 設定
+  alice.publicKey,      // 署名者公開鍵
+);
 ```
 
 MosaicFlagsは以下の通りです。
@@ -103,13 +105,15 @@ mosaicChangeTx = sym.MosaicSupplyChangeTransaction.create(
 
 ```js
 //モザイク変更
-mosaicChangeTx = facade.transactionFactory.createEmbedded({
-  type: 'mosaic_supply_change_transaction_v1',  // Txタイプ:モザイク変更Tx
-  signerPublicKey: aliceKey.publicKey,          // 署名者公開鍵
-  mosaicId: new sdkSymbol.models.UnresolvedMosaicId(mosaicDefTx.id.value),
-  delta: new sdkSymbol.models.Amount(10000n),   // 数量
-  action: sdkSymbol.models.MosaicSupplyChangeAction.INCREASE
-});
+mosaicChangeDescriptor = new sdkSymbol.descriptors.MosaicSupplyChangeTransactionV1Descriptor( // Txタイプ:モザイク変更Tx
+  new sdkSymbol.models.UnresolvedMosaicId(mosaicDefTx.id.value),  // モザイクID
+  new sdkSymbol.models.Amount(10000n),                // 数量
+  sdkSymbol.models.MosaicSupplyChangeAction.INCREASE  // アクション
+);
+mosaicChangeTx = facade.createEmbeddedTransactionFromTypedDescriptor(
+  mosaicChangeDescriptor, // トランザクション Descriptor 設定
+  alice.publicKey,        // 署名者公開鍵
+);
 ```
 
 supplyMutable:falseの場合、全モザイクが発行者にある場合だけ数量の変更が可能です。
@@ -142,32 +146,27 @@ await txRepo.announce(signedTx).toPromise();
 #### v3
 
 ```js
-// マークルハッシュの算出
 embeddedTransactions = [
   mosaicDefTx,
   mosaicChangeTx
 ];
-merkleHash = facade.constructor.hashEmbeddedTransactions(embeddedTransactions);
 
 // アグリゲートTx作成
-aggregateTx = facade.transactionFactory.create({
-  type: 'aggregate_complete_transaction_v2',
-  signerPublicKey: aliceKey.publicKey,  // 署名者公開鍵
-  deadline: facade.network.fromDatetime(new Date()).addHours(2).timestamp, //Deadline:有効期限
-  transactionsHash: merkleHash,
-  transactions: embeddedTransactions
-});
-
-// 連署により追加される連署情報のサイズを追加して最終的なTxサイズを算出する
-requiredCosignatures = 0; // 必要な連署者の数を指定
-calculatedCosignatures = requiredCosignatures > aggregateTx.cosignatures.length ? requiredCosignatures : aggregateTx.cosignatures.length;
-sizePerCosignature = 8 + 32 + 64;
-calculatedSize = aggregateTx.size - aggregateTx.cosignatures.length * sizePerCosignature + calculatedCosignatures * sizePerCosignature;
-aggregateTx.fee = new sdkSymbol.models.Amount(BigInt(calculatedSize * 100)); //手数料
+descriptor = new sdkSymbol.descriptors.AggregateCompleteTransactionV2Descriptor(
+  facade.static.hashEmbeddedTransactions(embeddedTransactions),
+  embeddedTransactions
+);
+aggregateTx = facade.createTransactionFromTypedDescriptor(
+  descriptor,       // トランザクション Descriptor 設定
+  alice.publicKey,  // 署名者公開鍵
+  100,              // 手数料乗数
+  60 * 60 * 2,      // Deadline:有効期限(秒単位)
+  0                 // 連署者数
+);
 
 // 署名とアナウンス
-sig = facade.signTransaction(aliceKey, aggregateTx);
-jsonPayload = facade.transactionFactory.constructor.attachSignature(aggregateTx, sig);
+sig = alice.signTransaction(aggregateTx);
+jsonPayload = facade.transactionFactory.static.attachSignature(aggregateTx, sig);
 await fetch(
   new URL('/transactions', NODE),
   {
@@ -297,26 +296,35 @@ await txRepo.announce(signedTx).toPromise();
 
 ```js
 //受信アカウント作成
-bobKey = new sdkSymbol.KeyPair(sdkCore.PrivateKey.random());
-bobAddress = facade.network.publicKeyToAddress(bobKey.publicKey);
+bob = facade.createAccount(sdkCore.PrivateKey.random());
 
 // Tx作成
-tx = facade.transactionFactory.create({
-  type: 'transfer_transaction_v1',      // Txタイプ:転送Tx
-  signerPublicKey: aliceKey.publicKey,  // 署名者公開鍵
-  deadline: facade.network.fromDatetime(new Date()).addHours(2).timestamp, //Deadline:有効期限
-  recipientAddress: bobAddress.toString(),
-  mosaics: [
-    { mosaicId: 0x72C0212E67A08BCEn, amount: 1000000n },  // 1XYM送金
-    { mosaicId: mosaicDefTx.id.value, amount: 1n },       // 5.1 で作成したモザイク
+descriptor = new sdkSymbol.descriptors.TransferTransactionV1Descriptor(  // Txタイプ:転送Tx
+  bob.address,      // 受取アドレス
+  [
+    // 1XYM送金
+    new sdkSymbol.descriptors.UnresolvedMosaicDescriptor(
+      new sdkSymbol.models.UnresolvedMosaicId(0x72C0212E67A08BCEn),
+      new sdkSymbol.models.Amount(1000000n)
+    ),
+    // 5.1 で作成したモザイク
+    new sdkSymbol.descriptors.UnresolvedMosaicDescriptor(
+      new sdkSymbol.models.UnresolvedMosaicId(mosaicDefTx.id.value),
+      new sdkSymbol.models.Amount(1n)
+    )
   ],
-  message: new Uint8Array()
-});
-tx.fee = new sdkSymbol.models.Amount(BigInt(tx.size * 100)); //手数料
+  new Uint8Array()  // メッセージ
+);
+tx = facade.createTransactionFromTypedDescriptor(
+  descriptor,       // トランザクション Descriptor 設定
+  alice.publicKey,  // 署名者公開鍵
+  100,              // 手数料乗数
+  60 * 60 * 2       // Deadline:有効期限(秒単位)
+);
 
 // 署名とアナウンス
-sig = facade.signTransaction(aliceKey, tx);
-jsonPayload = facade.transactionFactory.constructor.attachSignature(tx, sig);
+sig = alice.signTransaction(tx);
+jsonPayload = facade.transactionFactory.static.attachSignature(tx, sig);
 await fetch(
   new URL('/transactions', NODE),
   {
@@ -507,56 +515,58 @@ crypto.getRandomValues(array);
 nonce = new sdkSymbol.models.MosaicNonce(array[0] * 0x00000001 + array[1] * 0x00000100 + array[2] * 0x00010000 + array[3] * 0x01000000);
 
 //モザイク定義
-mosaicDefTx = facade.transactionFactory.createEmbedded({
-  type: 'mosaic_definition_transaction_v1',         // Txタイプ:モザイク定義Tx
-  signerPublicKey: aliceKey.publicKey,              // 署名者公開鍵
-  id: new sdkSymbol.models.MosaicId(sdkSymbol.generateMosaicId(aliceAddress, nonce.value)),
-  divisibility: 0,                                  // divisibility:可分性
-  duration: new sdkSymbol.models.BlockDuration(0n), // duration:有効期限
-  nonce: nonce,
-  flags: flags
-});
+mosaicDefDescriptor = new sdkSymbol.descriptors.MosaicDefinitionTransactionV1Descriptor(  // Txタイプ:モザイク定義Tx
+  new sdkSymbol.models.MosaicId(sdkSymbol.generateMosaicId(alice.address, nonce)),  // モザイクID
+  new sdkSymbol.models.BlockDuration(0n), // duration:有効期限
+  nonce,  // ナンス
+  flags,  // モザイクフラグ
+  0       // divisibility:可分性
+);
+mosaicDefTx = facade.createEmbeddedTransactionFromTypedDescriptor(
+  mosaicDefDescriptor,  // トランザクション Descriptor 設定
+  alice.publicKey,      // 署名者公開鍵
+);
 
 //モザイク数量固定
-mosaicChangeTx = facade.transactionFactory.createEmbedded({
-  type: 'mosaic_supply_change_transaction_v1',  // Txタイプ:モザイク変更Tx
-  signerPublicKey: aliceKey.publicKey,          // 署名者公開鍵
-  mosaicId: new sdkSymbol.models.UnresolvedMosaicId(mosaicDefTx.id.value),
-  delta: new sdkSymbol.models.Amount(1n),       // 数量
-  action: sdkSymbol.models.MosaicSupplyChangeAction.INCREASE
-});
+mosaicChangeDescriptor = new sdkSymbol.descriptors.MosaicSupplyChangeTransactionV1Descriptor( // Txタイプ:モザイク変更Tx
+  new sdkSymbol.models.UnresolvedMosaicId(mosaicDefTx.id.value),  // モザイクID
+  new sdkSymbol.models.Amount(1n),                    // 数量
+  sdkSymbol.models.MosaicSupplyChangeAction.INCREASE  // アクション
+);
+mosaicChangeTx = facade.createEmbeddedTransactionFromTypedDescriptor(
+  mosaicChangeDescriptor, // トランザクション Descriptor 設定
+  alice.publicKey,        // 署名者公開鍵
+);
 
 // NFTデータ
-nftTx = facade.transactionFactory.createEmbedded({
-  type: 'transfer_transaction_v1',      // Txタイプ:転送Tx
-  signerPublicKey: aliceKey.publicKey,  // 署名者公開鍵
-  recipientAddress: bobAddress.toString(),
-  message: new Uint8Array([0x00,...(new TextEncoder('utf-8')).encode('Hello Symbol!')]) // NFTデータ実体
-});
+descriptor = new sdkSymbol.descriptors.TransferTransactionV1Descriptor(  // Txタイプ:転送Tx
+  bob.address,      // 受取アドレス
+  [],               // モザイク
+  '\0Hello Symbol!' // メッセージ
+);
+nftTx = facade.createEmbeddedTransactionFromTypedDescriptor(
+  descriptor,       // トランザクション Descriptor 設定
+  alice.publicKey,  // 署名者公開鍵
+);
 
-// マークルハッシュの算出
 embeddedTransactions = [
   mosaicDefTx,
   mosaicChangeTx,
   nftTx
 ];
-merkleHash = facade.constructor.hashEmbeddedTransactions(embeddedTransactions);
 
 // モザイクの生成とNFTデータをアグリゲートしてブロックに登録
-aggregateTx = facade.transactionFactory.create({
-  type: 'aggregate_complete_transaction_v2',
-  signerPublicKey: aliceKey.publicKey,
-  deadline: facade.network.fromDatetime(new Date()).addHours(2).timestamp, //Deadline:有効期限
-  transactionsHash: merkleHash,
-  transactions: embeddedTransactions
-});
-
-// 連署により追加される連署情報のサイズを追加して最終的なTxサイズを算出する
-requiredCosignatures = 0; // 必要な連署者の数を指定
-calculatedCosignatures = requiredCosignatures > aggregateTx.cosignatures.length ? requiredCosignatures : aggregateTx.cosignatures.length;
-sizePerCosignature = 8 + 32 + 64;
-calculatedSize = aggregateTx.size - aggregateTx.cosignatures.length * sizePerCosignature + calculatedCosignatures * sizePerCosignature;
-aggregateTx.fee = new sdkSymbol.models.Amount(BigInt(calculatedSize * 100)); //手数料
+descriptor = new sdkSymbol.descriptors.AggregateCompleteTransactionV2Descriptor(
+  facade.static.hashEmbeddedTransactions(embeddedTransactions),
+  embeddedTransactions
+);
+aggregateTx = facade.createTransactionFromTypedDescriptor(
+  descriptor,       // トランザクション Descriptor 設定
+  alice.publicKey,  // 署名者公開鍵
+  100,              // 手数料乗数
+  60 * 60 * 2,      // Deadline:有効期限(秒単位)
+  0                 // 連署者数
+);
 ```
 
 モザイク生成時のブロック高と作成アカウントがモザイク情報に含まれているので同ブロック内のトランザクションを検索することにより、
@@ -608,14 +618,19 @@ revocationTx = sym.MosaicSupplyRevocationTransaction.create(
 #### v3
 
 ```js
-revocationTx = facade.transactionFactory.create({
-  type: 'mosaic_supply_revocation_transaction_v1',  // Txタイプ:モザイク回収Tx
-  signerPublicKey: aliceKey.publicKey,              // 署名者公開鍵
-  deadline: facade.network.fromDatetime(new Date()).addHours(2).timestamp, //Deadline:有効期限
-  mosaic: { mosaicId: mosaicId, amount: 1n },       // 回収モザイクIDと数量
-  sourceAddress: bobAddress
-});
-revocationTx.fee = new sdkSymbol.models.Amount(BigInt(revocationTx.size * 100)); //手数料
+revocationDescriptor = new sdkSymbol.descriptors.MosaicSupplyRevocationTransactionV1Descriptor(  // Txタイプ:モザイク回収Tx
+  bob.address,                                          // 回収先アドレス
+  new sdkSymbol.descriptors.UnresolvedMosaicDescriptor(
+    new sdkSymbol.models.UnresolvedMosaicId(mosaicId),  // 回収モザイクID
+    new sdkSymbol.models.Amount(1n),                    // 数量
+  )
+);
+revocationTx = facade.createTransactionFromTypedDescriptor(
+  revocationDescriptor, // トランザクション Descriptor 設定
+  alice.publicKey,      // 署名者公開鍵
+  100,              // 手数料乗数
+  60 * 60 * 2       // Deadline:有効期限(秒単位)
+);
 ```
 
 

@@ -18,12 +18,11 @@ console.log("https://testnet.symbol.tools/?recipient=" + carol.address.plain() +
 
 ```js
 // 使い捨てアカウントCarolの生成
-carolKey = new sdkSymbol.KeyPair(sdkCore.PrivateKey.random());
-carolAddress = facade.network.publicKeyToAddress(carolKey.publicKey);
-console.log(carolAddress.toString());
+carol = facade.createAccount(sdkCore.PrivateKey.random());
+console.log(carol.address.toString());
 
 // FAUCET URL出力
-console.log("https://testnet.symbol.tools/?recipient=" + carolAddress.toString() +"&amount=100");
+console.log("https://testnet.symbol.tools/?recipient=" + carol.address.toString() +"&amount=100");
 ```
 
 ## 11.1 アカウント制限
@@ -61,8 +60,7 @@ AddressRestrictionFlagにはBlockIncomingAddressのほか、上記のような�
 #### v3
 
 ```js
-bobKey = new sdkSymbol.KeyPair(sdkCore.PrivateKey.random());
-bobAddress = facade.network.publicKeyToAddress(bobKey.publicKey);
+bob = facade.createAccount(sdkCore.PrivateKey.random());
 
 // 制限設定
 f = sdkSymbol.models.AccountRestrictionFlags.ADDRESS.value; // アドレス制限
@@ -70,21 +68,23 @@ f += sdkSymbol.models.AccountRestrictionFlags.BLOCK.value; // ブロック
 flags = new sdkSymbol.models.AccountRestrictionFlags(f);
 
 // アドレス制限設定Tx作成
-tx = facade.transactionFactory.create({
-  type: 'account_address_restriction_transaction_v1', // Txタイプ:アドレス制限設定Tx
-  signerPublicKey: carolKey.publicKey,                // 署名者公開鍵
-  deadline: facade.network.fromDatetime(new Date()).addHours(2).timestamp, //Deadline:有効期限
-  restrictionFlags: flags,  // アドレス制限フラグ
-  restrictionAdditions: [   // 設定アドレス
-    bobAddress,
+descriptor = new sdkSymbol.descriptors.AccountAddressRestrictionTransactionV1Descriptor(  // Txタイプ:アドレス制限設定Tx
+  flags,  // アドレス制限フラグ
+  [       // 設定アドレス
+    bob.address,
   ],
-  restrictionDeletions: []  // 解除アドレス
-});
-tx.fee = new sdkSymbol.models.Amount(BigInt(tx.size * 100)); // 手数料
+  []      // 解除アドレス
+);
+tx = facade.createTransactionFromTypedDescriptor(
+  descriptor,       // トランザクション Descriptor 設定
+  carol.publicKey,  // 署名者公開鍵
+  100,                // 手数料乗数
+  60 * 60 * 2         // Deadline:有効期限(秒単位)
+);
 
 // 署名
-sig = facade.signTransaction(carolKey, tx);
-jsonPayload = facade.transactionFactory.constructor.attachSignature(tx, sig);
+sig = carol.signTransaction(tx);
+jsonPayload = facade.transactionFactory.static.attachSignature(tx, sig);
 
 // アドレス制限設定Txをアナウンス
 await fetch(
@@ -147,21 +147,23 @@ f += sdkSymbol.models.AccountRestrictionFlags.BLOCK.value;    // ブロック
 flags = new sdkSymbol.models.AccountRestrictionFlags(f);
 
 // モザイク制限設定Tx作成
-tx = facade.transactionFactory.create({
-  type: 'account_mosaic_restriction_transaction_v1',  // Txタイプ:モザイク制限設定Tx
-  signerPublicKey: carolKey.publicKey,                // 署名者公開鍵
-  deadline: facade.network.fromDatetime(new Date()).addHours(2).timestamp, //Deadline:有効期限
-  restrictionFlags: flags,  // モザイク制限フラグ
-  restrictionAdditions: [   // 設定モザイク
-    0x72C0212E67A08BCEn,
+descriptor = new sdkSymbol.descriptors.AccountMosaicRestrictionTransactionV1Descriptor(  // Txタイプ:モザイク制限設定Tx
+  flags,  // モザイク制限フラグ
+  [       // 設定モザイク
+    new sdkSymbol.models.UnresolvedMosaicId(0x72C0212E67A08BCEn),
   ],
-  restrictionDeletions: []  // 解除モザイク
-});
-tx.fee = new sdkSymbol.models.Amount(BigInt(tx.size * 100)); // 手数料
+  []      // 解除モザイク
+);
+tx = facade.createTransactionFromTypedDescriptor(
+  descriptor,       // トランザクション Descriptor 設定
+  carol.publicKey,  // 署名者公開鍵
+  100,                // 手数料乗数
+  60 * 60 * 2         // Deadline:有効期限(秒単位)
+);
 
 // 署名
-sig = facade.signTransaction(carolKey, tx);
-jsonPayload = facade.transactionFactory.constructor.attachSignature(tx, sig);
+sig = carol.signTransaction(tx);
+jsonPayload = facade.transactionFactory.static.attachSignature(tx, sig);
 
 // モザイク制限設定Txをアナウンス
 await fetch(
@@ -224,21 +226,23 @@ f += sdkSymbol.models.AccountRestrictionFlags.OUTGOING.value;         // 送信
 flags = new sdkSymbol.models.AccountRestrictionFlags(f);
 
 // トランザクション制限設定Tx作成
-tx = facade.transactionFactory.create({
-  type: 'account_operation_restriction_transaction_v1', // Txタイプ:トランザクション制限設定Tx
-  signerPublicKey: carolKey.publicKey,                  // 署名者公開鍵
-  deadline: facade.network.fromDatetime(new Date()).addHours(2).timestamp, //Deadline:有効期限
-  restrictionFlags: flags,  // トランザクション制限フラグ
-  restrictionAdditions: [   // 設定トランザクション
+descriptor = new sdkSymbol.descriptors.AccountOperationRestrictionTransactionV1Descriptor(  // Txタイプ:トランザクション制限設定Tx
+  flags,  // トランザクション制限フラグ
+  [       // 設定トランザクション
     sdkSymbol.models.TransactionType.ACCOUNT_OPERATION_RESTRICTION.value,
   ],
-  restrictionDeletions: []  // 解除トランザクション
-});
-tx.fee = new sdkSymbol.models.Amount(BigInt(tx.size * 100)); // 手数料
+  []      // 解除トランザクション
+);
+tx = facade.createTransactionFromTypedDescriptor(
+  descriptor,       // トランザクション Descriptor 設定
+  carol.publicKey,  // 署名者公開鍵
+  100,              // 手数料乗数
+  60 * 60 * 2       // Deadline:有効期限(秒単位)
+);
 
 // 署名
-sig = facade.signTransaction(carolKey, tx);
-jsonPayload = facade.transactionFactory.constructor.attachSignature(tx, sig);
+sig = carol.signTransaction(tx);
+jsonPayload = facade.transactionFactory.static.attachSignature(tx, sig);
 
 // トランザクション制限設定Txをアナウンス
 await fetch(
@@ -306,7 +310,7 @@ console.log(res);
 
 ```js
 res = await fetch(
-  new URL('/restrictions/account/' + carolAddress.toString(), NODE),
+  new URL('/restrictions/account/' + carol.address.toString(), NODE),
   {
     method: 'GET',
     headers: { 'Content-Type': 'application/json' },
@@ -441,80 +445,73 @@ crypto.getRandomValues(array);
 nonce = new sdkSymbol.models.MosaicNonce(array[0] * 0x00000001 + array[1] * 0x00000100 + array[2] * 0x00010000 + array[3] * 0x01000000);
 
 // モザイク定義
-mosaicDefTx = facade.transactionFactory.createEmbedded({
-  type: 'mosaic_definition_transaction_v1',         // Txタイプ:モザイク定義Tx
-  signerPublicKey: carolKey.publicKey,              // 署名者公開鍵
-  id: new sdkSymbol.models.MosaicId(sdkSymbol.generateMosaicId(carolAddress, nonce.value)),
-  divisibility: 0,                                  // divisibility:可分性
-  duration: new sdkSymbol.models.BlockDuration(0n), // duration:有効期限
-  nonce: nonce,
-  flags: flags
-});
+mosaicDefDescriptor = new sdkSymbol.descriptors.MosaicDefinitionTransactionV1Descriptor(  // Txタイプ:モザイク定義Tx
+  new sdkSymbol.models.MosaicId(sdkSymbol.generateMosaicId(carol.address, nonce)),
+  new sdkSymbol.models.BlockDuration(0n), // duration:有効期限
+  nonce,  // ナンス
+  flags,  // モザイクフラグ
+  0       // divisibility:可分性
+);
+mosaicDefTx = facade.createEmbeddedTransactionFromTypedDescriptor(
+  mosaicDefDescriptor,  // トランザクション Descriptor 設定
+  carol.publicKey,      // 署名者公開鍵
+);
 
 // モザイク変更
-mosaicChangeTx = facade.transactionFactory.createEmbedded({
-  type: 'mosaic_supply_change_transaction_v1',  // Txタイプ:モザイク変更Tx
-  signerPublicKey: carolKey.publicKey,          // 署名者公開鍵
-  mosaicId: mosaicDefTx.id.value,
-  delta: new sdkSymbol.models.Amount(1000000n), // 数量
-  action: sdkSymbol.models.MosaicSupplyChangeAction.INCREASE
-});
-
-// キーと値の設定
-key = "KYC";  // restrictionKey 
+mosaicChangeDescriptor = new sdkSymbol.descriptors.MosaicSupplyChangeTransactionV1Descriptor( // Txタイプ:モザイク変更Tx
+  new sdkSymbol.models.UnresolvedMosaicId(mosaicDefTx.id.value),
+  new sdkSymbol.models.Amount(1000000n),              // 数量
+  sdkSymbol.models.MosaicSupplyChangeAction.INCREASE  // アクション
+);
+mosaicChangeTx = facade.createEmbeddedTransactionFromTypedDescriptor(
+  mosaicChangeDescriptor, // トランザクション Descriptor 設定
+  carol.publicKey,        // 署名者公開鍵
+);
 
 // キー生成(v2 準拠)
-hasher = sha3_256.create();
-hasher.update((new TextEncoder()).encode(key));
-digest = hasher.digest();
-lower = [...digest.subarray(0, 4)];
-lower.reverse();
-lowerValue = BigInt("0x" + sdkCore.utils.uint8ToHex(lower));
-higher = [...digest.subarray(4, 8)];
-higher.reverse();
-higherValue = BigInt("0x" + sdkCore.utils.uint8ToHex(higher)) | 0x80000000n;
-keyId = lowerValue + higherValue * 0x100000000n;
+// メタデータキー生成と同じロジックのため、metadataGenerateKey()を利用する
+key = sdkSymbol.metadataGenerateKey("KYC"); // restrictionKey 
 
 // グローバルモザイク制限
-mosaicGlobalResTx = facade.transactionFactory.createEmbedded({
-  type: 'mosaic_global_restriction_transaction_v1', // Txタイプ:グローバルモザイク制限Tx
-  signerPublicKey: carolKey.publicKey,              // 署名者公開鍵
-  mosaicId: mosaicDefTx.id.value,
-  restrictionKey: keyId,
-  newRestrictionValue: 1n,
-  newRestrictionType: sdkSymbol.models.MosaicRestrictionType.EQ
-});
+mosaicGlobalResDescriptor = new sdkSymbol.descriptors.MosaicGlobalRestrictionTransactionV1Descriptor( // Txタイプ:グローバルモザイク制限Tx
+  new sdkSymbol.models.UnresolvedMosaicId(mosaicDefTx.id.value),  // 制限をかけるモザイクID
+  new sdkSymbol.models.UnresolvedMosaicId(0n),                    // 参照するモザイクID。制限をかけるモザイクIDと一致する場合は 0 を指定する
+  key,  // restriction key 
+  0n,   // 現在の restriction value
+  1n,   // 新しく設定する restriction value
+  sdkSymbol.models.MosaicRestrictionType.NONE,  // 現在の restriction type
+  sdkSymbol.models.MosaicRestrictionType.EQ     // 新しく設定する restriction type
+);
+mosaicGlobalResTx = facade.createEmbeddedTransactionFromTypedDescriptor(
+  mosaicGlobalResDescriptor,  // トランザクション Descriptor 設定
+  carol.publicKey,            // 署名者公開鍵
+);
 // 更新する場合は以下も設定する必要あり
 //   - mosaicGlobalResTx.previousRestrictionValue
 //   - mosaicGlobalResTx.previousRestrictionType
 
-// マークルハッシュの算出
 embeddedTransactions = [
   mosaicDefTx,
   mosaicChangeTx,
   mosaicGlobalResTx
 ];
-merkleHash = facade.constructor.hashEmbeddedTransactions(embeddedTransactions);
 
 // アグリゲートTx作成
-aggregateTx = facade.transactionFactory.create({
-  type: 'aggregate_complete_transaction_v2',
-  signerPublicKey: carolKey.publicKey,  // 署名者公開鍵
-  deadline: facade.network.fromDatetime(new Date()).addHours(2).timestamp, //Deadline:有効期限
-  transactionsHash: merkleHash,
-  transactions: embeddedTransactions
-});
-
-// 連署により追加される連署情報のサイズを追加して最終的なTxサイズを算出する
-requiredCosignatures = 0; // 必要な連署者の数を指定
-calculatedCosignatures = requiredCosignatures > aggregateTx.cosignatures.length ? requiredCosignatures : aggregateTx.cosignatures.length;
-sizePerCosignature = 8 + 32 + 64;
-calculatedSize = aggregateTx.size - aggregateTx.cosignatures.length * sizePerCosignature + calculatedCosignatures * sizePerCosignature;
-aggregateTx.fee = new sdkSymbol.models.Amount(BigInt(calculatedSize * 100)); //手数料
+aggregateDescriptor = new sdkSymbol.descriptors.AggregateCompleteTransactionV2Descriptor(
+  facade.static.hashEmbeddedTransactions(embeddedTransactions),
+  embeddedTransactions
+);
+aggregateTx = facade.createTransactionFromTypedDescriptor(
+  aggregateDescriptor,  // トランザクション Descriptor 設定
+  carol.publicKey,      // 署名者公開鍵
+  100,                  // 手数料乗数
+  60 * 60 * 2,          // Deadline:有効期限(秒単位)
+  0                     // 連署者数
+);
 
 // 署名とアナウンス
-sig = facade.signTransaction(carolKey, aggregateTx);
-jsonPayload = facade.transactionFactory.constructor.attachSignature(aggregateTx, sig);
+sig = carol.signTransaction(aggregateTx);
+jsonPayload = facade.transactionFactory.static.attachSignature(aggregateTx, sig);
 await fetch(
   new URL('/transactions', NODE),
   {
@@ -587,21 +584,23 @@ await txRepo.announce(signedTx).toPromise();
 
 ```js
 // Carolに適用
-carolMosaicAddressResTx = facade.transactionFactory.create({
-  type: 'mosaic_address_restriction_transaction_v1',  // Txタイプ:モザイク制限適用Tx
-  signerPublicKey: carolKey.publicKey,                // 署名者公開鍵
-  deadline: facade.network.fromDatetime(new Date()).addHours(2).timestamp, //Deadline:有効期限
-  mosaicId: mosaicDefTx.id.value,
-  restrictionKey: keyId,
-  previousRestrictionValue: 0xFFFFFFFFFFFFFFFFn,
-  newRestrictionValue: 1n,
-  targetAddress: carolAddress
-});
-carolMosaicAddressResTx.fee = new sdkSymbol.models.Amount(BigInt(carolMosaicAddressResTx.size * 100)); //手数料
+carolMosaicAddressResDescriptor = new sdkSymbol.descriptors.MosaicAddressRestrictionTransactionV1Descriptor( // Txタイプ:モザイク制限適用Tx
+  new sdkSymbol.models.UnresolvedMosaicId(mosaicDefTx.id.value),  // 適用するモザイクID
+  key,                  // restriction key 
+  0xFFFFFFFFFFFFFFFFn,  // 現在の restriction value (制限がかけられたいない場合は 0xFFFFFFFFFFFFFFFF)
+  1n,                   // 新しく設定する restriction value
+  carol.address
+);
+carolMosaicAddressResTx = facade.createTransactionFromTypedDescriptor(
+  carolMosaicAddressResDescriptor,  // トランザクション Descriptor 設定
+  carol.publicKey,                  // 署名者公開鍵
+  100,                              // 手数料乗数
+  60 * 60 * 2                       // Deadline:有効期限(秒単位)
+);
 
 // 署名とアナウンス
-carolSig = facade.signTransaction(carolKey, carolMosaicAddressResTx);
-carolJsonPayload = facade.transactionFactory.constructor.attachSignature(carolMosaicAddressResTx, carolSig);
+carolSig = carol.signTransaction(carolMosaicAddressResTx);
+carolJsonPayload = facade.transactionFactory.static.attachSignature(carolMosaicAddressResTx, carolSig);
 await fetch(
   new URL('/transactions', NODE),
   {
@@ -615,25 +614,26 @@ await fetch(
   return json;
 });
 
-bobKey = new sdkSymbol.KeyPair(sdkCore.PrivateKey.random());
-bobAddress = facade.network.publicKeyToAddress(bobKey.publicKey);
+bob = facade.createAccount(sdkCore.PrivateKey.random());
 
 // Bobに適用
-bobMosaicAddressResTx = facade.transactionFactory.create({
-  type: 'mosaic_address_restriction_transaction_v1',  // Txタイプ:モザイク制限適用Tx
-  signerPublicKey: carolKey.publicKey,                // 署名者公開鍵
-  deadline: facade.network.fromDatetime(new Date()).addHours(2).timestamp, //Deadline:有効期限
-  mosaicId: mosaicDefTx.id.value,
-  restrictionKey: keyId,
-  previousRestrictionValue: 0xFFFFFFFFFFFFFFFFn,
-  newRestrictionValue: 1n,
-  targetAddress: bobAddress
-});
-bobMosaicAddressResTx.fee = new sdkSymbol.models.Amount(BigInt(bobMosaicAddressResTx.size * 100)); //手数料
+bobMosaicAddressResDescriptor = new sdkSymbol.descriptors.MosaicAddressRestrictionTransactionV1Descriptor( // Txタイプ:モザイク制限適用Tx
+  new sdkSymbol.models.UnresolvedMosaicId(mosaicDefTx.id.value),  // 適用するモザイクID
+  key,                  // restriction key 
+  0xFFFFFFFFFFFFFFFFn,  // 現在の restriction value (制限がかけられたいない場合は 0xFFFFFFFFFFFFFFFF)
+  1n,                   // 新しく設定する restriction value
+  bob.address
+);
+bobMosaicAddressResTx = facade.createTransactionFromTypedDescriptor(
+  bobMosaicAddressResDescriptor,  // トランザクション Descriptor 設定
+  carol.publicKey,                // 署名者公開鍵
+  100,                            // 手数料乗数
+  60 * 60 * 2                     // Deadline:有効期限(秒単位)
+);
 
 // 署名とアナウンス
-bobSig = facade.signTransaction(carolKey, bobMosaicAddressResTx);
-bobJsonPayload = facade.transactionFactory.constructor.attachSignature(bobMosaicAddressResTx, bobSig);
+bobSig = carol.signTransaction(bobMosaicAddressResTx);
+bobJsonPayload = facade.transactionFactory.static.attachSignature(bobMosaicAddressResTx, bobSig);
 await fetch(
   new URL('/transactions', NODE),
   {
@@ -777,20 +777,26 @@ await txRepo.announce(signedTx).toPromise();
 
 ```js
 // 成功（CarolからBobに送信）
-trTx = facade.transactionFactory.create({
-  type: 'transfer_transaction_v1',      // Txタイプ:転送Tx
-  signerPublicKey: carolKey.publicKey,  // 署名者公開鍵
-  deadline: facade.network.fromDatetime(new Date()).addHours(2).timestamp, //Deadline:有効期限
-  recipientAddress: bobAddress.toString(),
-  mosaics: [
-    { mosaicId: mosaicDefTx.id.value, amount: 1n },
+trDescriptor = new sdkSymbol.descriptors.TransferTransactionV1Descriptor(  // Txタイプ:転送Tx
+  bob.address,      // 受取アドレス
+  [
+    // グローバルモザイク制限をかけたモザイクID
+    new sdkSymbol.descriptors.UnresolvedMosaicDescriptor(
+      new sdkSymbol.models.UnresolvedMosaicId(mosaicDefTx.id.value),
+      new sdkSymbol.models.Amount(1n)
+    )
   ],
-  message: new Uint8Array()
-});
-trTx.fee = new sdkSymbol.models.Amount(BigInt(trTx.size * 100)); //手数料
+  new Uint8Array()  // メッセージ
+);
+trTx = facade.createTransactionFromTypedDescriptor(
+  trDescriptor,     // トランザクション Descriptor 設定
+  carol.publicKey,  // 署名者公開鍵
+  100,              // 手数料乗数
+  60 * 60 * 2       // Deadline:有効期限(秒単位)
+);
 // 署名とアナウンス
-sig = facade.signTransaction(carolKey, trTx);
-jsonPayload = facade.transactionFactory.constructor.attachSignature(trTx, sig);
+sig = carol.signTransaction(trTx);
+jsonPayload = facade.transactionFactory.static.attachSignature(trTx, sig);
 await fetch(
   new URL('/transactions', NODE),
   {
@@ -805,24 +811,29 @@ await fetch(
 });
 
 // 失敗（CarolからDaveに送信）
-daveKey = new sdkSymbol.KeyPair(sdkCore.PrivateKey.random());
-daveAddress = facade.network.publicKeyToAddress(daveKey.publicKey);
+dave = facade.createAccount(sdkCore.PrivateKey.random());
 // Tx作成
-trTx = facade.transactionFactory.create({
-  type: 'transfer_transaction_v1',      // Txタイプ:転送Tx
-  signerPublicKey: carolKey.publicKey,  // 署名者公開鍵
-  deadline: facade.network.fromDatetime(new Date()).addHours(2).timestamp, //Deadline:有効期限
-  recipientAddress: daveAddress.toString(),
-  mosaics: [
-    { mosaicId: mosaicDefTx.id.value, amount: 1n },
+trDescriptor = new sdkSymbol.descriptors.TransferTransactionV1Descriptor(  // Txタイプ:転送Tx
+  dave.address,     // 受取アドレス
+  [
+    // グローバルモザイク制限をかけたモザイクID
+    new sdkSymbol.descriptors.UnresolvedMosaicDescriptor(
+      new sdkSymbol.models.UnresolvedMosaicId(mosaicDefTx.id.value),
+      new sdkSymbol.models.Amount(1n)
+    )
   ],
-  message: new Uint8Array()
-});
-trTx.fee = new sdkSymbol.models.Amount(BigInt(trTx.size * 100)); //手数料
+  new Uint8Array()  // メッセージ
+);
+trTx = facade.createTransactionFromTypedDescriptor(
+  trDescriptor,     // トランザクション Descriptor 設定
+  carol.publicKey,  // 署名者公開鍵
+  100,              // 手数料乗数
+  60 * 60 * 2       // Deadline:有効期限(秒単位)
+);
 
 // 署名とアナウンス
-sig = facade.signTransaction(carolKey, trTx);
-jsonPayload = facade.transactionFactory.constructor.attachSignature(trTx, sig);
+sig = carol.signTransaction(trTx);
+jsonPayload = facade.transactionFactory.static.attachSignature(trTx, sig);
 await fetch(
   new URL('/transactions', NODE),
   {
