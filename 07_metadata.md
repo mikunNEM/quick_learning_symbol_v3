@@ -83,7 +83,7 @@ metadataInfo = await fetch(
 sizeDelta = value.length;
 if (metadataInfo.length > 0) {
   sizeDelta -= metadataInfo[0].metadataEntry.valueSize;
-  value = sdkSymbol.metadataUpdateValue(value, sdkCore.utils.hexToUint8(metadataInfo[0].metadataEntry.value));
+  value = sdkSymbol.metadataUpdateValue(sdkCore.utils.hexToUint8(metadataInfo[0].metadataEntry.value, value));
 }
 
 // アカウントメタデータ登録Tx作成
@@ -237,7 +237,7 @@ metadataInfo = await fetch(
 sizeDelta = value.length;
 if (metadataInfo.length > 0) {
   sizeDelta -= metadataInfo[0].metadataEntry.valueSize;
-  value = sdkSymbol.metadataUpdateValue(value, sdkCore.utils.hexToUint8(metadataInfo[0].metadataEntry.value));
+  value = sdkSymbol.metadataUpdateValue(sdkCore.utils.hexToUint8(metadataInfo[0].metadataEntry.value, value));
 }
 
 // アカウントメタデータ登録Tx作成
@@ -372,7 +372,7 @@ metadataInfo = await fetch(
 sizeDelta = value.length;
 if (metadataInfo.length > 0) {
   sizeDelta -= metadataInfo[0].metadataEntry.valueSize;
-  value = sdkSymbol.metadataUpdateValue(value, sdkCore.utils.hexToUint8(metadataInfo[0].metadataEntry.value));
+  value = sdkSymbol.metadataUpdateValue(sdkCore.utils.hexToUint8(metadataInfo[0].metadataEntry.value, value));
 }
 
 // モザイクメタデータ登録Tx作成
@@ -500,7 +500,7 @@ metadataInfo = await fetch(
 sizeDelta = value.length;
 if (metadataInfo.length > 0) {
   sizeDelta -= metadataInfo[0].metadataEntry.valueSize;
-  value = sdkSymbol.metadataUpdateValue(value, sdkCore.utils.hexToUint8(metadataInfo[0].metadataEntry.value));
+  value = sdkSymbol.metadataUpdateValue(sdkCore.utils.hexToUint8(metadataInfo[0].metadataEntry.value, value));
 }
 
 // ネームスペースメタデータ登録Tx作成
