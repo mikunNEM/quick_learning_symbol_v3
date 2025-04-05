@@ -587,7 +587,7 @@ await txRepo.announce(signedTx).toPromise();
 carolMosaicAddressResDescriptor = new sdkSymbol.descriptors.MosaicAddressRestrictionTransactionV1Descriptor( // Txタイプ:モザイク制限適用Tx
   new sdkSymbol.models.UnresolvedMosaicId(mosaicDefTx.id.value),  // 適用するモザイクID
   key,                  // restriction key 
-  0xFFFFFFFFFFFFFFFFn,  // 現在の restriction value (制限がかけられたいない場合は 0xFFFFFFFFFFFFFFFF)
+  0xFFFFFFFFFFFFFFFFn,  // 現在の restriction value (制限がかけられていない場合は 0xFFFFFFFFFFFFFFFF)
   1n,                   // 新しく設定する restriction value
   carol.address
 );
@@ -620,7 +620,7 @@ bob = facade.createAccount(sdkCore.PrivateKey.random());
 bobMosaicAddressResDescriptor = new sdkSymbol.descriptors.MosaicAddressRestrictionTransactionV1Descriptor( // Txタイプ:モザイク制限適用Tx
   new sdkSymbol.models.UnresolvedMosaicId(mosaicDefTx.id.value),  // 適用するモザイクID
   key,                  // restriction key 
-  0xFFFFFFFFFFFFFFFFn,  // 現在の restriction value (制限がかけられたいない場合は 0xFFFFFFFFFFFFFFFF)
+  0xFFFFFFFFFFFFFFFFn,  // 現在の restriction value (制限がかけられていない場合は 0xFFFFFFFFFFFFFFFF)
   1n,                   // 新しく設定する restriction value
   bob.address
 );
