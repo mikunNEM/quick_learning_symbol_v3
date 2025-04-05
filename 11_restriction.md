@@ -442,7 +442,7 @@ flags = new sdkSymbol.models.MosaicFlags(f);
 // ナンス設定
 array = new Uint8Array(sdkSymbol.models.MosaicNonce.SIZE);
 crypto.getRandomValues(array);
-nonce = new sdkSymbol.models.MosaicNonce(array[0] * 0x00000001 + array[1] * 0x00000100 + array[2] * 0x00010000 + array[3] * 0x01000000);
+nonce = sdkSymbol.models.MosaicNonce.deserialize(array);
 
 // モザイク定義
 mosaicDefDescriptor = new sdkSymbol.descriptors.MosaicDefinitionTransactionV1Descriptor(  // Txタイプ:モザイク定義Tx
