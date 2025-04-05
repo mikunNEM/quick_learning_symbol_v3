@@ -70,7 +70,7 @@ document.getElementsByTagName('head')[0].appendChild(script);
 #### v3
 
 ```js
-const SDK_VERSION = "3.2.2";
+const SDK_VERSION = "3.2.3";
 const sdk = await import(`https://www.unpkg.com/symbol-sdk@${SDK_VERSION}/dist/bundle.web.js`);
 const sdkCore = sdk.core;
 const sdkSymbol = sdk.symbol;

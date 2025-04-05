@@ -233,7 +233,8 @@ txInfo = await fetch(
 });
 
 // 連署者の署名
-cosignature = bob.cosignTransaction(aggregateTx, true);
+txHash = new sdkCore.Hash256(sdkCore.utils.hexToUint8(txInfo.meta.hash));
+cosignature = bob.cosignTransactionHash(txHash, true);
 
 // アナウンス
 body= {

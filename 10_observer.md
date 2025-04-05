@@ -697,7 +697,8 @@ async function exeAggregateBondedCosignature(aggTx){
   // インナートランザクションの署名者に自分が指定されている場合
   if (aggTx.transaction.transactions.find(inTx => inTx.transaction.signerPublicKey === bob.publicKey.toString()) === undefined) {
     // Aliceのトランザクションで署名
-    cosignature = bob.cosignTransaction(aggregateTx, true);
+    txHash = new sdkCore.Hash256(sdkCore.utils.hexToUint8(aggTx.meta.hash));
+    cosignature = bob.cosignTransactionHash(txHash, true);
     signTxHash = new sdkCore.Hash256(sdkCore.utils.hexToUint8(aggTx.meta.hash));
 
     // アナウンス

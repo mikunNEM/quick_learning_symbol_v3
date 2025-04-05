@@ -335,12 +335,12 @@ if(block.type === sdkSymbol.models.BlockType.NORMAL.value){
   hasher = sha3_256.create();
   hasher.update(Buffer.from(block.signature,'hex')); //signature
   hasher.update(Buffer.from(block.signerPublicKey,'hex')); //publicKey
-  hasher.update(Buffer.from(block.version.toString(16).padStart(1 * 2, '0'),'hex').reverse());
-  hasher.update(Buffer.from(block.network.toString(16).padStart(1 * 2, '0'),'hex').reverse());
-  hasher.update(Buffer.from(block.type.toString(16).padStart(2 * 2, '0'),'hex').reverse());
-  hasher.update(Buffer.from(BigInt(block.height).toString(16).padStart(8 * 2, '0'),'hex').reverse());
-  hasher.update(Buffer.from(BigInt(block.timestamp).toString(16).padStart(8 * 2, '0'),'hex').reverse());
-  hasher.update(Buffer.from(BigInt(block.difficulty).toString(16).padStart(8 * 2, '0'),'hex').reverse());
+  hasher.update(sdkCore.utils.intToBytes(block.version, 1));
+  hasher.update(sdkCore.utils.intToBytes(block.network, 1));
+  hasher.update(sdkCore.utils.intToBytes(block.type, 2));
+  hasher.update(sdkCore.utils.intToBytes(BigInt(block.height), 8));
+  hasher.update(sdkCore.utils.intToBytes(BigInt(block.timestamp), 8));
+  hasher.update(sdkCore.utils.intToBytes(BigInt(block.difficulty), 8));
   hasher.update(Buffer.from(block.proofGamma,'hex'));
   hasher.update(Buffer.from(block.proofVerificationHash,'hex'));
   hasher.update(Buffer.from(block.proofScalar,'hex'));
@@ -349,7 +349,7 @@ if(block.type === sdkSymbol.models.BlockType.NORMAL.value){
   hasher.update(Buffer.from(block.receiptsHash,'hex'));
   hasher.update(Buffer.from(block.stateHash,'hex'));
   hasher.update(Buffer.from(block.beneficiaryAddress,'hex'));
-  hasher.update(Buffer.from(block.feeMultiplier.toString(16).padStart(4 * 2, '0'),'hex').reverse());
+  hasher.update(sdkCore.utils.intToBytes(block.feeMultiplier, 4));
   hash = sdkCore.utils.uint8ToHex(hasher.digest());
   console.log(hash === blockInfo.meta.hash);
 }
@@ -438,12 +438,12 @@ if(block.type === sdkSymbol.models.BlockType.IMPORTANCE.value){
   hasher = sha3_256.create();
   hasher.update(Buffer.from(block.signature,'hex')); //signature
   hasher.update(Buffer.from(block.signerPublicKey,'hex')); //publicKey
-  hasher.update(Buffer.from(block.version.toString(16).padStart(1 * 2, '0'),'hex').reverse());
-  hasher.update(Buffer.from(block.network.toString(16).padStart(1 * 2, '0'),'hex').reverse());
-  hasher.update(Buffer.from(block.type.toString(16).padStart(2 * 2, '0'),'hex').reverse());
-  hasher.update(Buffer.from(BigInt(block.height).toString(16).padStart(8 * 2, '0'),'hex').reverse());
-  hasher.update(Buffer.from(BigInt(block.timestamp).toString(16).padStart(8 * 2, '0'),'hex').reverse());
-  hasher.update(Buffer.from(BigInt(block.difficulty).toString(16).padStart(8 * 2, '0'),'hex').reverse());
+  hasher.update(sdkCore.utils.intToBytes(block.version, 1));
+  hasher.update(sdkCore.utils.intToBytes(block.network, 1));
+  hasher.update(sdkCore.utils.intToBytes(block.type, 2));
+  hasher.update(sdkCore.utils.intToBytes(BigInt(block.height), 8));
+  hasher.update(sdkCore.utils.intToBytes(BigInt(block.timestamp), 8));
+  hasher.update(sdkCore.utils.intToBytes(BigInt(block.difficulty), 8));
   hasher.update(Buffer.from(block.proofGamma,'hex'));
   hasher.update(Buffer.from(block.proofVerificationHash,'hex'));
   hasher.update(Buffer.from(block.proofScalar,'hex'));
@@ -452,11 +452,11 @@ if(block.type === sdkSymbol.models.BlockType.IMPORTANCE.value){
   hasher.update(Buffer.from(block.receiptsHash,'hex'));
   hasher.update(Buffer.from(block.stateHash,'hex'));
   hasher.update(Buffer.from(block.beneficiaryAddress,'hex'));
-  hasher.update(Buffer.from(block.feeMultiplier.toString(16).padStart(4 * 2, '0'),'hex').reverse());
-  hasher.update(Buffer.from(block.votingEligibleAccountsCount.toString(16).padStart(4 * 2, '0'),'hex').reverse());
-  hasher.update(Buffer.from(BigInt(block.harvestingEligibleAccountsCount).toString(16).padStart(8 * 2, '0'),'hex').reverse());
-  hasher.update(Buffer.from(BigInt(block.totalVotingBalance).toString(16).padStart(8 * 2, '0'),'hex').reverse());
-  hasher.update(Buffer.from(block.previousImportanceBlockHash,'hex')); //signature
+  hasher.update(sdkCore.utils.intToBytes(block.feeMultiplier, 4));
+  hasher.update(sdkCore.utils.intToBytes(block.votingEligibleAccountsCount, 4));
+  hasher.update(sdkCore.utils.intToBytes(BigInt(block.harvestingEligibleAccountsCount), 8));
+  hasher.update(sdkCore.utils.intToBytes(BigInt(block.totalVotingBalance), 8));
+  hasher.update(Buffer.from(block.previousImportanceBlockHash,'hex'));
 
   hash = sdkCore.utils.uint8ToHex(hasher.digest());
   console.log(hash === blockInfo.meta.hash);
@@ -750,8 +750,8 @@ if (aliceInfo.supplementalPublicKeys.voting !== undefined) {
 importanceSnapshots = new Uint8Array([]);
 if (parseInt(aliceInfo.importance) !== 0) {
   importanceSnapshots = new Uint8Array([
-    ...Buffer.from(BigInt(aliceInfo.importance).toString(16).padStart(8 * 2, '0'),'hex').reverse(),
-    ...Buffer.from(BigInt(aliceInfo.importanceHeight).toString(16).padStart(8 * 2, '0'),'hex').reverse(),
+    ...sdkCore.utils.intToBytes(BigInt(aliceInfo.importance), 8),
+    ...sdkCore.utils.intToBytes(BigInt(aliceInfo.importanceHeight), 8),
   ]);
 }
 activityBuckets = new Uint8Array([]);
@@ -760,32 +760,41 @@ if (aliceInfo.importance > 0) {
     bucket = aliceInfo.activityBuckets[idx];
     activityBuckets = new Uint8Array([
       ...activityBuckets,
-      ...Buffer.from(BigInt(bucket.startHeight).toString(16).padStart(8 * 2, '0'),'hex').reverse(),
-      ...Buffer.from(BigInt(bucket.totalFeesPaid).toString(16).padStart(8 * 2, '0'),'hex').reverse(),
-      ...Buffer.from(bucket.beneficiaryCount.toString(16).padStart(4 * 2, '0'),'hex').reverse(),
-      ...Buffer.from(BigInt(bucket.rawScore).toString(16).padStart(8 * 2, '0'),'hex').reverse(),
+      ...sdkCore.utils.intToBytes(BigInt(bucket.startHeight), 8),
+      ...sdkCore.utils.intToBytes(BigInt(bucket.totalFeesPaid), 8),
+      ...sdkCore.utils.intToBytes(bucket.beneficiaryCount, 4),
+      ...sdkCore.utils.intToBytes(BigInt(bucket.rawScore), 8),
     ]);
   }
 }
 balances = new Uint8Array([]);
 if (aliceInfo.mosaics.length > 0) {
   aliceInfo.mosaics.forEach(mosaic => {
-    balances = new Uint8Array([...balances, ...sdkCore.utils.hexToUint8(mosaic.id).reverse(), ...Buffer.from(BigInt(mosaic.amount).toString(16).padStart(8 * 2, '0'),'hex').reverse()]);
+    balances = new Uint8Array([
+      ...balances,
+      ...sdkCore.utils.intToBytes(BigInt("0x" + mosaic.id), 8),
+      ...sdkCore.utils.intToBytes(BigInt(mosaic.amount), 8),
+    ]);
   });
 }
 accountInfoBytes = new Uint8Array([
-  ...Buffer.from(aliceInfo.version.toString(16).padStart(2 * 2, '0'),'hex').reverse(),
+  ...sdkCore.utils.intToBytes(aliceInfo.version, 2),
   ...sdkCore.utils.hexToUint8(aliceInfo.address),
-  ...Buffer.from(BigInt(aliceInfo.addressHeight).toString(16).padStart(8 * 2, '0'),'hex').reverse(),
+  ...sdkCore.utils.intToBytes(BigInt(aliceInfo.addressHeight), 8),
   ...sdkCore.utils.hexToUint8(aliceInfo.publicKey),
-  ...Buffer.from(BigInt(aliceInfo.publicKeyHeight).toString(16).padStart(8 * 2, '0'),'hex').reverse(),
-  ...Buffer.from(aliceInfo.accountType.toString(16).padStart(1 * 2, '0'),'hex').reverse(),
-  ...Buffer.from(format.toString(16).padStart(1 * 2, '0'),'hex').reverse(),
-  ...Buffer.from(supplementalPublicKeysMask.toString(16).padStart(1 * 2, '0'),'hex').reverse(),
-  ...Buffer.from(votingPublicKeys.length.toString(16).padStart(1 * 2, '0'),'hex').reverse(),
-  ...linkedPublicKey, ...nodePublicKey, ...vrfPublicKey, ...votingPublicKeys,
-  ...importanceSnapshots, ...activityBuckets,
-  ...Buffer.from(aliceInfo.mosaics.length.toString(16).padStart(2 * 2, '0'),'hex').reverse(), ...balances
+  ...sdkCore.utils.intToBytes(BigInt(aliceInfo.publicKeyHeight), 8),
+  ...sdkCore.utils.intToBytes(aliceInfo.accountType, 1),
+  ...sdkCore.utils.intToBytes(format, 1),
+  ...sdkCore.utils.intToBytes(supplementalPublicKeysMask, 1),
+  ...sdkCore.utils.intToBytes(votingPublicKeys, 1),
+  ...linkedPublicKey,
+  ...nodePublicKey,
+  ...vrfPublicKey,
+  ...votingPublicKeys,
+  ...importanceSnapshots,
+  ...activityBuckets,
+  ...sdkCore.utils.intToBytes(aliceInfo.mosaics.length, 2),
+  ...balances
 ]);
 aliceStateHash = sdkCore.utils.uint8ToHex(hasher.update(accountInfoBytes).digest());
 
@@ -888,11 +897,14 @@ srcAddress = (new sdkSymbol.Address("TBIL6D6RURP45YQRWV6Q7YVWIIPLQGLZQFHWFEQ")).
 
 targetAddress = (new sdkSymbol.Address("TBIL6D6RURP45YQRWV6Q7YVWIIPLQGLZQFHWFEQ")).bytes;
 
+scopeKey = "CF217E116AA422E2"; // scopeKey, メタデータキーを指定
+targetId = "1275B0B7511D9161"; // targetId, モザイクIDを指定
+
 hasher = sha3_256.create();    
 hasher.update(srcAddress);
 hasher.update(targetAddress);
-hasher.update(sdkCore.utils.hexToUint8("CF217E116AA422E2").reverse()); // scopeKey, メタデータキーを指定
-hasher.update(sdkCore.utils.hexToUint8("1275B0B7511D9161").reverse()); // targetId, モザイクIDを指定
+hasher.update(sdkCore.utils.intToBytes(BigInt("0x" + scopeKey), 8)); // scopeKey, メタデータキーを指定
+hasher.update(sdkCore.utils.intToBytes(BigInt("0x" + targetId), 8)); // targetId, モザイクIDを指定
 hasher.update(Uint8Array.from([1])); // type: Mosaic 1
 compositeHash = hasher.digest();
 
@@ -904,16 +916,16 @@ pathHash = sdkCore.utils.uint8ToHex(hasher.digest());
 //stateHash(Value値)
 hasher = sha3_256.create();
 version = 1;
-hasher.update(Buffer.from(version.toString(16).padStart(2 * 2, '0'),'hex').reverse()); //version
+hasher.update(sdkCore.utils.intToBytes(version, 2)); //version
 hasher.update(srcAddress);
 hasher.update(targetAddress);
-hasher.update(sdkCore.utils.hexToUint8("CF217E116AA422E2").reverse()); // scopeKey, メタデータキーを指定
-hasher.update(sdkCore.utils.hexToUint8("1275B0B7511D9161").reverse()); // targetId, モザイクIDを指定
+hasher.update(sdkCore.utils.intToBytes(BigInt("0x" + scopeKey), 8)); // scopeKey, メタデータキーを指定
+hasher.update(sdkCore.utils.intToBytes(BigInt("0x" + targetId), 8)); // targetId, モザイクIDを指定
 hasher.update(Uint8Array.from([1])); //mosaic
 
 value = Buffer.from("test");
 
-hasher.update(Buffer.from(value.length.toString(16).padStart(2 * 2, '0'),'hex').reverse());
+hasher.update(sdkCore.utils.intToBytes(value.length, 2));
 hasher.update(value); 
 stateHash = sdkCore.utils.uint8ToHex(hasher.digest());
 
@@ -1015,12 +1027,15 @@ srcAddress = (new sdkSymbol.Address("TBIL6D6RURP45YQRWV6Q7YVWIIPLQGLZQFHWFEQ")).
 
 targetAddress = (new sdkSymbol.Address("TBIL6D6RURP45YQRWV6Q7YVWIIPLQGLZQFHWFEQ")).bytes;
 
+scopeKey = "9772B71B058127D7"; // scopeKey, メタデータキーを指定
+targetId = "0000000000000000"; // targetId
+
 //compositePathHash(Key値)
 hasher = sha3_256.create();    
 hasher.update(srcAddress);
 hasher.update(targetAddress);
-hasher.update(sdkCore.utils.hexToUint8("9772B71B058127D7").reverse()); // scopeKey, メタデータキーを指定
-hasher.update(sdkCore.utils.hexToUint8("0000000000000000").reverse()); // targetId
+hasher.update(sdkCore.utils.intToBytes(BigInt("0x" + scopeKey), 8)); // scopeKey, メタデータキーを指定
+hasher.update(sdkCore.utils.intToBytes(BigInt("0x" + targetId), 8)); // targetId
 hasher.update(Uint8Array.from([0])); // type: Account 0
 compositeHash = hasher.digest();
 
@@ -1032,14 +1047,14 @@ pathHash = sdkCore.utils.uint8ToHex(hasher.digest());
 //stateHash(Value値)
 hasher = sha3_256.create();
 version = 1;
-hasher.update(Buffer.from(version.toString(16).padStart(2 * 2, '0'),'hex').reverse()); //version
+hasher.update(sdkCore.utils.intToBytes(version, 2)); //version
 hasher.update(srcAddress);
 hasher.update(targetAddress);
-hasher.update(sdkCore.utils.hexToUint8("9772B71B058127D7").reverse());  // scopeKey, メタデータキーを指定
-hasher.update(sdkCore.utils.hexToUint8("0000000000000000").reverse());  // targetId
-hasher.update(Uint8Array.from([0]));                                    // account
-value = Buffer.from("test");                                            // メタデータの値を指定
-hasher.update(Buffer.from(value.length.toString(16).padStart(2 * 2, '0'),'hex').reverse());
+hasher.update(sdkCore.utils.intToBytes(BigInt("0x" + scopeKey), 8)); // scopeKey, メタデータキーを指定
+hasher.update(sdkCore.utils.intToBytes(BigInt("0x" + targetId), 8)); // targetId
+hasher.update(Uint8Array.from([0]));                                 // account
+value = Buffer.from("test");                                         // メタデータの値を指定
+hasher.update(sdkCore.utils.intToBytes(value.length, 2));
 hasher.update(value); 
 stateHash = sdkCore.utils.uint8ToHex(hasher.digest());
 
