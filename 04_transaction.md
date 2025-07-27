@@ -35,15 +35,6 @@
 
 送信先のBobアドレスを作成しておきます。
 
-#### v2
-
-```js
-bob = sym.Account.generateNewAccount(networkType);
-console.log(bob.address);
-```
-```js
-> Address {address: 'TDWBA6L3CZ6VTZAZPAISL3RWM5VKMHM6J6IM3LY', networkType: 152}
-```
 
 #### v3
 
@@ -58,17 +49,6 @@ console.log(bob.address.toString());
 
 トランザクションを作成します。
 
-#### v2
-
-```js
-tx = sym.TransferTransaction.create(
-    sym.Deadline.create(epochAdjustment), //Deadline:有効期限
-    bob.address, 
-    [],
-    sym.PlainMessage.create("Hello Symbol!"), //メッセージ
-    networkType //テストネット・メインネット区分
-).setMaxFee(100); //手数料
-```
 
 #### v3
 
@@ -125,14 +105,9 @@ console.log(tx);
 各設定項目について説明します。
 
 #### 有効期限
-sdk v2 ではデフォルトで2時間後に設定されます。
-最大6時間まで指定可能です。
+*sdk v2 ではデフォルトで2時間後に設定されます。
+ 最大6時間まで指定可能です。
 
-#### v2
-
-```js
-sym.Deadline.create(epochAdjustment,6)
-```
 
 #### v3
 
@@ -177,12 +152,6 @@ networkTimestamp.addHours(6).timestamp;
 
 ##### 空メッセージ
 
-#### v2
-
-```js
-sym.EmptyMessage
-```
-
 #### v3
 
 ```js
@@ -190,12 +159,6 @@ messageData = new Uint8Array();
 ```
 
 ##### 平文メッセージ
-
-#### v2
-
-```js
-sym.PlainMessage.create("Hello Symbol!")
-```
 
 #### v3
 
@@ -226,12 +189,6 @@ messageData = new Uint8Array(new TextEncoder('utf-8').encode('Hello, Symbol!'));
 
 ##### 暗号文メッセージ
 
-#### v2
-
-```js
-sym.EncryptedMessage('294C8979156C0D941270BAC191F7C689E93371EDBC36ADD8B920CF494012A97BA2D1A3759F9A6D55D5957E9D');
-```
-
 EncryptedMessageを使用すると、「指定したメッセージが暗号化されています」という意味のフラグ（目印）がつきます。
 エクスプローラーやウォレットはそのフラグを参考にメッセージを無用にデコードしなかったり、非表示にしたりなどの処理を行います。
 このメソッドが暗号化をするわけではありません。
@@ -245,12 +202,6 @@ messageData = alice.messageEncoder().encode(bob.publicKey, new TextEncoder().enc
 ```
 
 ##### 生データ
-
-#### v2
-
-```js
-sym.RawMessage.create(uint8Arrays[i])
-```
 
 #### v3
 
@@ -274,14 +225,6 @@ feeMultiprier = 100として指定する方法とmaxFee = 17600 として指定�
 
 ##### feeMultiprier = 100として指定する方法
 
-#### v2
-
-```js
-tx = sym.TransferTransaction.create(
-  ,,,,
-  networkType
-).setMaxFee(100);
-```
 
 #### v3
 
@@ -298,15 +241,6 @@ tx = facade.createTransactionFromTypedDescriptor(
 
 ##### maxFee = 17600 として指定する方法
 
-#### v2
-
-```js
-tx = sym.TransferTransaction.create(
-  ,,,,
-  networkType,
-  sym.UInt64.fromUint(17600)
-);
-```
 
 #### v3
 
@@ -325,33 +259,6 @@ tx.fee = new sdkSymbol.models.Amount(BigInt(17600)); //手数料
 
 ### 署名
 
-#### v2
-
-```js
-signedTx = alice.sign(tx,generationHash);
-console.log(signedTx);
-```
-###### 出力例
-```js
-> SignedTransaction
-    hash: "3BD00B0AF24DE70C7F1763B3FD64983C9668A370CB96258768B715B117D703C2"
-    networkType: 152
-    payload:        
-"AE00000000000000CFC7A36C17060A937AFE1191BC7D77E33D81F3CC48DF9A0FFE892858DFC08C9911221543D687813ECE3D36836458D2569084298C09223F9899DF6ABD41028D0AD4933FC1E4C56F9DF9314E9E0533173E1AB727BDB2A04B59F048124E93BEFBD20000000001985441F843000000000000879E76C702000000986F4982FE77894ABC3EBFDC16DFD4A5C2C7BC05BFD44ECE0E000000000000000048656C6C6F2053796D626F6C21"
-    signerPublicKey: "D4933FC1E4C56F9DF9314E9E0533173E1AB727BDB2A04B59F048124E93BEFBD2"
-    type: 16724
-```
-
-トランザクションの署名にはAccountクラスとgenerationHash値が必要です。
-
-generationHash
-- テストネット
-    - 49D6E1CE276A85B70EAFE52349AACCA389302E7A9754BCF1221E79494FC665A4
-- メインネット
-    - 57F7DA205008026C776CB6AED843393F04CD458E0AA2D9F1D5F31A402072B2D6
-
-generationHash値はそのブロックチェーンネットワークを一意に識別するための値です。
-同じ秘密鍵をもつ他のネットワークに使いまわされないようにそのネットワーク個別のハッシュ値を織り交ぜて署名済みトランザクションを作成します。
 
 #### v3
 
@@ -366,15 +273,6 @@ jsonPayload = facade.transactionFactory.static.attachSignature(tx, sig);
 
 ### アナウンス
 
-#### v2
-
-```js
-res = await txRepo.announce(signedTx).toPromise();
-console.log(res);
-```
-```js
-> TransactionAnnounceResponse {message: 'packet 9 was pushed to the network via /transactions'}
-```
 
 #### v3
 
@@ -404,11 +302,6 @@ Symbolではノードの応答速度を極限に高めるため、トランザ�
 
 ##### アナウンスに失敗した場合の応答例
 
-#### v2
-
-```js
-Uncaught Error: {"statusCode":409,"statusMessage":"Unknown Error","body":"{\"code\":\"InvalidArgument\",\"message\":\"payload has an invalid format\"}"}
-```
 
 #### v3
 
@@ -423,22 +316,6 @@ Uncaught Error: {"statusCode":409,"statusMessage":"Unknown Error","body":"{\"cod
 
 ノードに受理されたトランザクションのステータスを確認
 
-#### v2
-
-```js
-tsRepo = repo.createTransactionStatusRepository();
-transactionStatus = await tsRepo.getTransactionStatus(signedTx.hash).toPromise();
-console.log(transactionStatus);
-```
-###### 出力例
-```js
-> TransactionStatus
-    group: "confirmed"
-    code: "Success"
-    deadline: Deadline {adjustedValue: 11989512431}
-    hash: "661360E61C37E156B0BE18E52C9F3ED1022DCE846A4609D72DF9FA8A5B667747"
-    height: undefined
-```
 
 #### v3
 
@@ -497,11 +374,6 @@ Uncaught Error: {"statusCode":404,"statusMessage":"Unknown Error","body":"{\"cod
 #### エクスプローラーで確認
 signedTx.hash で取得できるハッシュ値を使ってエクスプローラーで検索してみましょう。
 
-#### v2
-
-```js
-console.log(signedTx.hash);
-```
 
 #### v3
 
@@ -520,33 +392,6 @@ console.log(facade.hashTransaction(tx).toString());
 
 #### SDKで確認
 
-#### v2
-
-```js
-txInfo = await txRepo.getTransaction(signedTx.hash,sym.TransactionGroup.Confirmed).toPromise();
-console.log(txInfo);
-```
-###### 出力例
-```js
-> TransferTransaction
-    deadline: Deadline {adjustedValue: 12883929118}
-    maxFee: UInt64 {lower: 17400, higher: 0}
-    message: PlainMessage {type: 0, payload: 'Hello Symbol!'}
-    mosaics: []
-    networkType: 152
-    payloadSize: 174
-    recipientAddress: Address {address: 'TDWBA6L3CZ6VTZAZPAISL3RWM5VKMHM6J6IM3LY', networkType: 152}
-    signature: "7A3562DCD7FEE4EE9CB456E48EFEEC687647119DC053DE63581FD46CA9D16A829FA421B39179AABBF4DE0C1D987B58490E3F95C37327358E6E461832E3B3A60D"
-    signer: PublicAccount {publicKey: '0E5C72B0D5946C1EFEE7E5317C5985F106B739BB0BC07E4F9A288417B3CD6D26', address: Address}
-  > transactionInfo: TransactionInfo
-        hash: "DA4B672E68E6561EAE560FB89B144AFE1EF75D2BE0D9B6755D90388F8BCC4709"
-        height: UInt64 {lower: 330012, higher: 0}
-        id: "626413050A21EB5CD286E17D"
-        index: 1
-        merkleComponentHash: "DA4B672E68E6561EAE560FB89B144AFE1EF75D2BE0D9B6755D90388F8BCC4709"
-    type: 16724
-    version: 1
-```
 
 #### v3
 
@@ -598,17 +443,6 @@ console.log(txInfo);
 ##### スクリプト例
 トランザクションをアナウンスした後は以下のようなスクリプトを流すと、チェーンの状態を把握しやすくて便利です。
 
-#### v2
-
-```js
-hash = signedTx.hash;
-tsRepo = repo.createTransactionStatusRepository();
-transactionStatus = await tsRepo.getTransactionStatus(hash).toPromise();
-console.log(transactionStatus);
-txInfo = await txRepo.getTransaction(hash,sym.TransactionGroup.Confirmed).toPromise();
-console.log(txInfo);
-```
-
 #### v3
 
 ```js
@@ -654,48 +488,6 @@ console.log(txInfo);
 
 Aliceが送受信したトランザクション履歴を一覧で取得します。
 
-#### v2
-
-```js
-result = await txRepo.search(
-  {
-    group:sym.TransactionGroup.Confirmed,
-    embedded:true,
-    address:alice.address
-  }
-).toPromise();
-
-txes = result.data;
-txes.forEach(tx => {
-  console.log(tx);
-})
-```
-###### 出力例
-```js
-> TransferTransaction
-    type: 16724
-    networkType: 152
-    payloadSize: 176
-    deadline: Deadline {adjustedValue: 11905303680}
-    maxFee: UInt64 {lower: 200000000, higher: 0}
-    recipientAddress: Address {address: 'TBXUTAX6O6EUVPB6X7OBNX6UUXBMPPAFX7KE5TQ', networkType: 152}
-    signature: "E5924A1EB653240A7220405A4DD4E221E71E43327B3BA691D267326FEE3F57458E8721907188DB33A3F2A9CB1D0293845B4D0F1D7A93C8A3389262D1603C7108"
-    signer: PublicAccount {publicKey: 'BDFAF3B090270920A30460AA943F9D8D4FCFF6741C2CB58798DBF7A2ED6B75AB', address: Address}
-  > message: RawMessage
-      payload: ""
-      type: -1
-  > mosaics: Array(1)
-      0: Mosaic
-        amount: UInt64 {lower: 10000000, higher: 0}
-        id: MosaicId
-          id: Id {lower: 760461000, higher: 981735131}
-  > transactionInfo: TransactionInfo
-      hash: "308472D34BE1A58B15A83B9684278010F2D69B59E39127518BE38A4D22EEF31D"
-      height: UInt64 {lower: 301717, higher: 0}
-      id: "6255242053E0E706653116F9"
-      index: 0
-      merkleComponentHash: "308472D34BE1A58B15A83B9684278010F2D69B59E39127518BE38A4D22EEF31D"
-```
 
 TransactionTypeは以下の通りです。
 ```js
@@ -766,31 +558,8 @@ txes.forEach(tx => {
 v2 ではメッセージは文字列で表されます。
 平文メッセージはそのままの文字列となり、暗号化メッセージや生データのようなバイナリデータのメッセージは16進数文字列に変換されます。
 
-#### v2
 
-```js
-plainMessage = sym.PlainMessage.create("Hello Symbol!");
-console.log(plainMessage);
-encryptedMessage = alice.encryptMessage("Hello Symbol!", bob.publicAccount);
-console.log(encryptedMessage);
-rawMessage = sym.RawMessage.create([0x10, 0x20, 0x30]);
-console.log(rawMessage);
-```
-###### 出力例
-```js
-> PlainMessage
-    payload: "Hello Symbol!"
-    type: 0
-> EncryptedMessage
-    payload: "629937CEDFA1083DA326BC7FB431BFF2976BDBD1AD68197DF728D834083D2D25D1825D332DE2DDE388"
-    recipientPublicAccount: PublicAccount {publicKey: '662CEDF69962B1E0F1BF0C43A510DFB12190128B90F7FE9BA48B1249E8E10DBE', address: Address}
-    type: 1
-> RawMessage
-    payload: "102030"
-    type: -1
-```
-
-一方で、 v3 ではメッセージはバイナリデータで表されます。
+v3 ではメッセージはバイナリデータで表されます。
 平文メッセージはバイナリデータに変換され、暗号化メッセージや生データのようなバイナリデータはそのままのバイナリデータとなります。
 
 #### v3
@@ -836,30 +605,6 @@ v2 では文字列データ、 v3 ではバイナリデータがメッセージ�
 実際に異なるSDKバージョンでTxを読み込んでみます。
 まずはそれぞれのバージョンでTxを作成し、ブロックチェーン上にアナウンスします。
 
-#### v2
-
-```js
-// 暗号化メッセージの作成
-encryptedMessage = alice.encryptMessage("Hello Symbol!", bob.publicAccount);
-
-// Tx 作成
-tx = sym.TransferTransaction.create(
-    sym.Deadline.create(epochAdjustment), //Deadline:有効期限
-    bob.address, 
-    [],
-    encryptedMessage, //メッセージ
-    networkType //テストネット・メインネット区分
-).setMaxFee(100); //手数料
-
-// 署名とアナウンス
-signedTx = alice.sign(tx,generationHash);
-res = await txRepo.announce(signedTx).toPromise();
-// Txハッシュの表示
-console.log(signedTx.hash);
-```
-```js
-> DE663D99BC9E2EEC408E255055CC4DA18CCEEEEF57CE97E607B2C47E9C725085
-```
 
 #### v3
 
