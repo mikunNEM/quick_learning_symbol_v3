@@ -60,13 +60,6 @@ Aliceとの送受信用のアカウントとして各章で必要に応じて作
 
 F12キーを押して開発者コンソールを開き、以下のスクリプトを入力します。
 
-#### v2
-
-```js
-(script = document.createElement('script')).src = 'https://xembook.github.io/nem2-browserify/symbol-sdk-pack-2.0.4.js';
-document.getElementsByTagName('head')[0].appendChild(script);
-```
-
 #### v3
 
 ```js
@@ -81,27 +74,6 @@ document.getElementsByTagName('head')[0].appendChild(script);
 ```
 
 続いて、ほぼすべての章で利用する共通ロジック部分を実行しておきます。
-
-#### v2
-
-```js
-NODE = window.origin; //現在開いているページのURLがここに入ります
-sym = require("/node_modules/symbol-sdk");
-repo = new sym.RepositoryFactoryHttp(NODE);
-txRepo = repo.createTransactionRepository();
-(async() =>{
-    networkType = await repo.getNetworkType().toPromise();
-    generationHash = await repo.getGenerationHash().toPromise();
-    epochAdjustment = await repo.getEpochAdjustment().toPromise();
-})();
-
-function clog(signedTx){
-    console.log(NODE + "/transactionStatus/" + signedTx.hash);
-    console.log(NODE + "/transactions/confirmed/" + signedTx.hash);
-    console.log("https://symbol.fyi/transactions/" + signedTx.hash);
-    console.log("https://testnet.symbol.fyi/transactions/" + signedTx.hash);
-}
-```
 
 #### v3
 
