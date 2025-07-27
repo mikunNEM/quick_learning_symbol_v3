@@ -8,24 +8,6 @@
 
 ### 新規生成
 
-#### v2
-
-```js
-alice = sym.Account.generateNewAccount(networkType);
-console.log(alice);
-```
-###### 出力例
-```js
-> Account
-    address: Address {address: 'TBXUTAX6O6EUVPB6X7OBNX6UUXBMPPAFX7KE5TQ', networkType: 152}
-    keyPair: {privateKey: Uint8Array(32), publicKey: Uint8Array(32)}
-```
-
-networkTypeは以下の通りです。
-```js
-{104: 'MAIN_NET', 152: 'TEST_NET'}
-```
-
 #### v3
 
 ```js
@@ -76,13 +58,6 @@ console.log(aliceAddress);
 
 ### 秘密鍵と公開鍵の導出
 
-#### v2
-
-```js
-console.log(alice.privateKey);
-console.log(alice.publicKey);
-```
-
 #### v3
 
 ```js
@@ -102,13 +77,6 @@ console.log(alice.publicKey.toString());
 
 ### アドレスの導出
 
-#### v2
-
-```js
-aliceRawAddress = alice.address.plain();
-console.log(aliceRawAddress);
-```
-
 #### v3
 
 ```js
@@ -124,15 +92,6 @@ console.log(aliceRawAddress);
 
 ### 秘密鍵からアカウント生成
 
-#### v2
-
-```js
-alice = sym.Account.createFromPrivateKey(
-  "1E9139CC1580B4AED6A1FE110085281D4982ED0D89CE07F3380EB83069B1****",
-  networkType
-);
-```
-
 #### v3
 
 ```js
@@ -140,23 +99,6 @@ alice = facade.createAccount(new sdkCore.PrivateKey("1E9139CC1580B4AED6A1FE11008
 ```
 
 ### 公開鍵クラスの生成
-
-#### v2
-
-```js
-alicePublicAccount = sym.PublicAccount.createFromPublicKey(
-  "D4933FC1E4C56F9DF9314E9E0533173E1AB727BDB2A04B59F048124E93BEFBD2",
-  networkType
-);
-console.log(alicePublicAccount);
-```
-###### 出力例
-```js
-> PublicAccount
-    address: Address {address: 'TBXUTAX6O6EUVPB6X7OBNX6UUXBMPPAFX7KE5TQ', networkType: 152}
-    publicKey: "D4933FC1E4C56F9DF9314E9E0533173E1AB727BDB2A04B59F048124E93BEFBD2"
-
-```
 
 #### v3
 
@@ -178,21 +120,6 @@ console.log(alicePublicAccount);
 ```
 
 ### アドレスクラスの生成
-
-#### v2
-
-```js
-aliceAddress = sym.Address.createFromRawAddress(
-  "TBXUTAX6O6EUVPB6X7OBNX6UUXBMPPAFX7KE5TQ"
-);
-console.log(aliceAddress);
-```
-###### 出力例
-```js
-> Address
-    address: "TBXUTAX6O6EUVPB6X7OBNX6UUXBMPPAFX7KE5TQ"
-    networkType: 152
-```
 
 #### v3
 
@@ -217,15 +144,13 @@ Symbolブロックチェーンでは、この手数料をXYMという共通ト�
 ### フォーセットから送信
 
 テストネットではフォーセット（蛇口）サービスから検証用のXYMを入手することができます。  
-メインネットの場合は取引所などでXYMを購入するか、投げ銭サービス(NEMLOG,QUEST)などを利用して寄付を募りましょう。  
+メインネットの場合は取引所などでXYMを購入するか、投げ銭サービス(QUEST)などを利用して寄付を募りましょう。  
 
 テストネット
 - FAUCET(蛇口)
   - https://testnet.symbol.tools/
 
 メインネット
-- NEMLOG
-  - https://nemlog.nem.social/
 - QUEST
   - https://quest-bc.com/
 
@@ -245,25 +170,6 @@ Symbolブロックチェーンでは、この手数料をXYMという共通ト�
 ノードに保存されているアカウント情報を取得します。
 
 ### 所有モザイク一覧の取得
-
-#### v2
-
-```js
-accountRepo = repo.createAccountRepository();
-accountInfo = await accountRepo.getAccountInfo(aliceAddress).toPromise();
-console.log(accountInfo);
-```
-###### 出力例
-```js
-> AccountInfo
-    address: Address {address: 'TBXUTAX6O6EUVPB6X7OBNX6UUXBMPPAFX7KE5TQ', networkType: 152}
-    publicKey: "0000000000000000000000000000000000000000000000000000000000000000"
-  > mosaics: Array(1)
-      0: Mosaic
-        amount: UInt64 {lower: 10000000, higher: 0}
-        id: MosaicId
-          id: Id {lower: 760461000, higher: 981735131}
-```
 
 #### v3
 
@@ -301,19 +207,6 @@ console.log(accountInfo);
 
 JavaScriptでは大きすぎる数値はあふれてしまうため、idやamountはUInt64というsdkの独自フォーマットで管理されています。文字列に変換する場合は toString()、数値に変換する場合は compact()、16進数にする場合は toHex() で変換してください。
 
-#### v2
-
-```js
-console.log("addressHeight:"); //アドレスが記録されたブロック高
-console.log(accountInfo.addressHeight.compact()); //数値
-accountInfo.mosaics.forEach(mosaic => {
-  console.log("id:" + mosaic.id.toHex()); //16進数
-  console.log("amount:" + mosaic.amount.toString()); //文字列
-});
-```
-
-大きすぎるid値をcompactで数値変換するとエラーが発生することがあります。  
-`Compacted value is greater than Number.Max_Value.`
 
 #### v3
 
@@ -331,21 +224,6 @@ BigInt(0x12345);
 
 所有するトークンの量は誤差の発生を防ぐため、整数値で扱います。トークンの定義から可分性を取得することができるので、その値を使って正確な所有量を表示してみます。  
 
-#### v2
-
-```js
-mosaicRepo = repo.createMosaicRepository();
-mosaicAmount = accountInfo.mosaics[0].amount.toString();
-mosaicInfo = await mosaicRepo.getMosaic(accountInfo.mosaics[0].id).toPromise();
-divisibility = mosaicInfo.divisibility; //可分性
-if(divisibility > 0){
-  displayAmount = mosaicAmount.slice(0,mosaicAmount.length-divisibility)  
-  + "." + mosaicAmount.slice(-divisibility);
-}else{
-  displayAmount = mosaicAmount;
-}
-console.log(displayAmount);
-```
 
 #### v3
 
@@ -380,13 +258,6 @@ console.log(displayAmount);
 
 #### 事前準備：対話のためのBobアカウントを生成
 
-#### v2
-
-```js
-bob = sym.Account.generateNewAccount(networkType);
-bobPublicAccount = bob.publicAccount;
-```
-
 #### v3
 
 ```js
@@ -397,21 +268,6 @@ bob = facade.createAccount(sdkCore.PrivateKey.random());
 
 Aliceの秘密鍵・Bobの公開鍵で暗号化し、Aliceの公開鍵・Bobの秘密鍵で復号します（AES-GCM形式）。
 
-#### v2
-
-```js
-message = 'Hello Symbol!';
-encryptedMessage = alice.encryptMessage(message ,bob.publicAccount);
-console.log(encryptedMessage);
-```
-
-```js
-> EncryptedMessage
-    payload: "C7451071F843015509C57BAA1C994C73E9FF1302CB2995423932D834A620532F54CF328B1CDA4426F8"
-  > recipientPublicAccount: PublicAccount
-      address: Address {address: 'TCUNO37PQOBCOTKHF3RXP4X7GOJ6LNRMBC2DFHI', networkType: 152}
-      publicKey: "662CEDF69962B1E0F1BF0C43A510DFB12190128B90F7FE9BA48B1249E8E10DBE"
-```
 
 #### v3
 
@@ -427,17 +283,6 @@ console.log(Buffer.from(encryptedMessage).toString("hex").toUpperCase());
 
 #### 復号化
 
-#### v2
-
-```js
-decryptMessage = bob.decryptMessage(
-  new sym.EncryptedMessage(
-    "C7451071F843015509C57BAA1C994C73E9FF1302CB2995423932D834A620532F54CF328B1CDA4426F8"
-  ),
-  alice.publicAccount
-).payload
-console.log(decryptMessage);
-```
 
 #### v3
 
@@ -486,14 +331,6 @@ if (decryptMessageData[0]) {
 
 Aliceの秘密鍵でメッセージを署名し、Aliceの公開鍵と署名でメッセージを検証します。
 
-#### v2
-
-```js
-Buffer = require("/node_modules/buffer").Buffer;
-payload = Buffer.from("Hello Symbol!", 'utf-8');
-signature = Buffer.from(sym.KeyPair.sign(alice.keyPair, payload)).toString("hex").toUpperCase();
-console.log(signature);
-```
 
 #### v3
 
@@ -509,16 +346,6 @@ console.log(signature.toString());
 
 #### 検証
 
-#### v2
-
-```js
-isVerified = sym.KeyPair.verify(
-  alice.keyPair.publicKey,
-  Buffer.from("Hello Symbol!", 'utf-8'),
-  Buffer.from(signature, 'hex')
-)
-console.log(isVerified);
-```
 
 #### v3
 
