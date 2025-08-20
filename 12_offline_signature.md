@@ -10,48 +10,7 @@ Aliceが起案者となりトランザクションを作成し、署名します
 次にBobが署名してAliceに返します。  
 最後にAliceがトランザクションを結合してネットワークにアナウンスします。  
 
-
 ## 12.1 トランザクション作成
-
-#### v2
-
-```js
-bob = sym.Account.generateNewAccount(networkType);
-
-innerTx1 = sym.TransferTransaction.create(
-    undefined,
-    bob.address, 
-    [],
-    sym.PlainMessage.create("tx1"),
-    networkType
-);
-
-innerTx2 = sym.TransferTransaction.create(
-    undefined,
-    alice.address, 
-    [],
-    sym.PlainMessage.create("tx2"),
-    networkType
-);
-
-aggregateTx = sym.AggregateTransaction.createComplete(
-    sym.Deadline.create(epochAdjustment),
-    [
-      innerTx1.toAggregate(alice.publicAccount),
-      innerTx2.toAggregate(bob.publicAccount)
-    ],
-    networkType,
-    [],
-).setMaxFeeForAggregate(100, 1);
-
-signedTx =  alice.sign(aggregateTx,generationHash);
-signedHash = signedTx.hash;
-signedPayload = signedTx.payload;
-
-console.log(signedPayload);
-```
-
-#### v3
 
 ```js
 bob = facade.createAccount(sdkCore.PrivateKey.random());
@@ -115,41 +74,13 @@ signedPayloadをBobに渡して署名を促します。
 
 ## 12.2 Bobによる連署
 
-
 Aliceから受け取ったsignedPayloadでトランザクションを復元します。
-
-#### v2
-
-```js
-tx = sym.TransactionMapping.createFromPayload(signedPayload);
-console.log(tx);
-```
-###### 出力例
-```js
-> AggregateTransaction
-    cosignatures: []
-    deadline: Deadline {adjustedValue: 12197090355}
-  > innerTransactions: Array(2)
-      0: TransferTransaction {type: 16724, networkType: 152, version: 1, deadline: Deadline, maxFee: UInt64, …}
-      1: TransferTransaction {type: 16724, networkType: 152, version: 1, deadline: Deadline, maxFee: UInt64, …}
-    maxFee: UInt64 {lower: 44800, higher: 0}
-    networkType: 152
-    payloadSize: undefined
-    signature: "4999A8437DA1C339280ED19BE0814965B73D60A1A6AF2F3856F69FBFF9C7123427757247A231EB89BB8844F37AC6F7559F859E2FDE39B8FA58A57F36DDB3B505"
-    signer: PublicAccount
-      address: Address {address: 'TBXUTAX6O6EUVPB6X7OBNX6UUXBMPPAFX7KE5TQ', networkType: 152}
-      publicKey: "D4933FC1E4C56F9DF9314E9E0533173E1AB727BDB2A04B59F048124E93BEFBD2"
-    transactionInfo: undefined
-    type: 16705
-    version: 1
-```
-
-#### v3
 
 ```js
 tx = facade.transactionFactory.static.deserialize(sdkCore.utils.hexToUint8(JSON.parse(jsonPayload).payload));
 console.log(tx);
 ```
+
 ###### 出力例
 ```js
 > AggregateBondedTransactionV2 
@@ -173,19 +104,6 @@ console.log(tx);
 
 念のため、Aliceがすでに署名したトランザクション（ペイロード）かどうかを検証します。
 
-#### v2
-
-```js
-Buffer = require("/node_modules/buffer").Buffer;
-res = tx.signer.verifySignature(
-    tx.getSigningBytes([...Buffer.from(signedPayload,'hex')],[...Buffer.from(generationHash,'hex')]),
-    tx.signature
-);
-console.log(res);
-```
-
-#### v3
-
 ```js
 res = facade.verifyTransaction(tx, tx.signature);
 console.log(res);
@@ -198,16 +116,6 @@ console.log(res);
 
 ペイロードがsigner、つまりAliceによって署名されたものであることが確認できました。
 次にBobが連署します。
-
-#### v2
-
-```js
-bobSignedTx = sym.CosignatureTransaction.signTransactionPayload(bob, signedPayload, generationHash);
-bobSignedTxSignature = bobSignedTx.signature;
-bobSignedTxSignerPublicKey = bobSignedTx.signerPublicKey;
-```
-
-#### v3
 
 ```js
 bobCosignature = bob.cosignTransaction(tx, true);
@@ -222,40 +130,6 @@ Bobが全ての署名を揃えられる場合は、Aliceに返却しなくても
 
 AliceはBobからbobSignedTxSignature,bobSignedTxSignerPublicKeyを受け取ります。  
 また事前にAlice自身で作成したsignedPayloadを用意します。  
-
-#### v2
-
-```js
-signedHash = sym.Transaction.createTransactionHash(signedPayload,Buffer.from(generationHash, 'hex'));
-cosignSignedTxs = [
-    new sym.CosignatureSignedTransaction(signedHash,bobSignedTxSignature,bobSignedTxSignerPublicKey)
-];
-
-recreatedTx = sym.TransactionMapping.createFromPayload(signedPayload);
-
-cosignSignedTxs.forEach((cosignedTx) => {
-    signedPayload += cosignedTx.version.toHex() + cosignedTx.signerPublicKey + cosignedTx.signature;
-});
-
-size = `00000000${(signedPayload.length / 2).toString(16)}`;
-formatedSize = size.substr(size.length - 8, size.length);
-littleEndianSize = formatedSize.substr(6, 2) + formatedSize.substr(4, 2) + formatedSize.substr(2, 2) + formatedSize.substr(0, 2);
-
-signedPayload = littleEndianSize + signedPayload.substr(8, signedPayload.length - 8);
-signedTx = new sym.SignedTransaction(signedPayload, signedHash, alice.publicKey, recreatedTx.type, recreatedTx.networkType);
-
-await txRepo.announce(signedTx).toPromise();
-```
-
-後半部分の連署を追加する部分がPayload(サイズ値)を直接操作しているので少し難しいかもしれません。
-Aliceの秘密鍵で再度署名できる場合はcosignSignedTxsを生成した後、以下のように連署済みトランザクションを生成することも可能です。
-
-```js
-resignedTx = recreatedTx.signTransactionGivenSignatures(alice, cosignSignedTxs, generationHash);
-await txRepo.announce(resignedTx).toPromise();
-```
-
-#### v3
 
 ```js
 recreatedTx = facade.transactionFactory.static.deserialize(sdkCore.utils.hexToUint8(JSON.parse(jsonPayload).payload));
