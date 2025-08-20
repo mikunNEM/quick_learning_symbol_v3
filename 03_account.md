@@ -1,14 +1,12 @@
 # 3.アカウント
 
-アカウントは秘密鍵に紐づく情報が記録されたデータ構造体です。アカウントと関連づいた秘密鍵を使って署名することでのみブロックチェーンのデータを更新することができます。  
+アカウントは秘密鍵に紐づく情報が記録されたデータ構造体です。アカウントと関連づいた秘密鍵を使って署名することでのみブロックチェーンのデータを更新することができます。
 
 ## 3.1 アカウント生成
 
-アカウントには秘密鍵と公開鍵をセットにしたキーペア、アドレスなどの情報が含まれています。まずはランダムにアカウントを作成して、それらの情報を確認してみましょう。  
+アカウントには秘密鍵と公開鍵をセットにしたキーペア、アドレスなどの情報が含まれています。まずはランダムにアカウントを作成して、それらの情報を確認してみましょう。
 
 ### 新規生成
-
-#### v3
 
 ```js
 alice = facade.createAccount(sdkCore.PrivateKey.random());
@@ -33,32 +31,7 @@ console.log(alice);
       transactionFactory: TransactionFactory
 ```
 
-<details><summary> SymbolAccount クラス実装前 (symbol-sdk v3.2.1 まで)</summary>
-
-v3.2.1 までは `SymbolAccount` クラスが無いため、秘密鍵・公開鍵の鍵セットとアドレスを別々に作成する必要ありました。
-v3.2.2 以降も別々に作成することはできますが、データを別々に管理する手間やリスクを考慮し、以降は `SymbolAccount` クラスを利用してコードを記述します。
-
-```js
-aliceKey = new sdkSymbol.KeyPair(sdkCore.PrivateKey.random());
-console.log(aliceKey);
-aliceAddress = facade.network.publicKeyToAddress(aliceKey.publicKey);
-console.log(aliceAddress);
-```
-
-###### 出力例
-
-```js
-> KeyPair {_privateKey: PrivateKey, _keyPair: {…}}
-    _keyPair: {publicKey: Uint8Array(32), privateKey: Uint8Array(32)}
-    _privateKey: PrivateKey {bytes: Uint8Array(32)}
-> Address {bytes: Uint8Array(24)}
-```
-
-</details>
-
 ### 秘密鍵と公開鍵の導出
-
-#### v3
 
 ```js
 console.log(alice.keyPair.privateKey.toString());
@@ -72,12 +45,9 @@ console.log(alice.publicKey.toString());
 
 #### 注意事項
 秘密鍵を紛失するとそのアカウントに紐づけられたデータを操作することが出来なくなります。また、他人は知らないという秘密鍵の性質を利用してデータ操作の署名を行うので、秘密鍵を他人に教えてはいけません。組織のなかで秘密鍵を譲り受けて運用を続けるといった行為も控えましょう。
-一般的なWebサービスでは「アカウントID」に対してパスワードが割り振られるため、パスワードの変更が可能ですが、ブロックチェーンではパスワードにあたる秘密鍵に対して一意に決まるID(アドレス)が割り振られるため、アカウントに紐づく秘密鍵を変更するということはできません。  
-
+一般的なWebサービスでは「アカウントID」に対してパスワードが割り振られるため、パスワードの変更が可能ですが、ブロックチェーンではパスワードにあたる秘密鍵に対して一意に決まるID(アドレス)が割り振られるため、アカウントに紐づく秘密鍵を変更するということはできません。
 
 ### アドレスの導出
-
-#### v3
 
 ```js
 aliceRawAddress = alice.address.toString();
@@ -88,19 +58,15 @@ console.log(aliceRawAddress);
 > TBXUTAX6O6EUVPB6X7OBNX6UUXBMPPAFX7KE5TQ
 ```
 
-これらがブロックチェーンを操作するための最も基本的な情報となります。また、秘密鍵からアカウントを生成したり、公開鍵やアドレスのみを扱うクラスの生成方法も確認しておきましょう。  
+これらがブロックチェーンを操作するための最も基本的な情報となります。また、秘密鍵からアカウントを生成したり、公開鍵やアドレスのみを扱うクラスの生成方法も確認しておきましょう。
 
 ### 秘密鍵からアカウント生成
-
-#### v3
 
 ```js
 alice = facade.createAccount(new sdkCore.PrivateKey("1E9139CC1580B4AED6A1FE110085281D4982ED0D89CE07F3380EB83069B1****"));
 ```
 
 ### 公開鍵クラスの生成
-
-#### v3
 
 ```js
 alicePublicAccount = facade.createPublicAccount(new sdkCore.PublicKey("D4933FC1E4C56F9DF9314E9E0533173E1AB727BDB2A04B59F048124E93BEFBD2"));
@@ -121,8 +87,6 @@ console.log(alicePublicAccount);
 
 ### アドレスクラスの生成
 
-#### v3
-
 ```js
 aliceAddress = new sdkSymbol.Address("TBXUTAX6O6EUVPB6X7OBNX6UUXBMPPAFX7KE5TQ");
 console.log(aliceAddress);
@@ -130,31 +94,31 @@ console.log(aliceAddress.toString());
 ```
 ###### 出力例
 ```js
-> Address {bytes: Uint8Array(24)}
+> Address {bytes: Uint8Array(24)}
 > TBXUTAX6O6EUVPB6X7OBNX6UUXBMPPAFX7KE5TQ
 ```
 
 ## 3.2 アカウントへの送信
 
-アカウントを作成しただけでは、ブロックチェーンにデータを送信することはできません。  
-パブリックブロックチェーンはリソースを有効活用するためにデータ送信時に手数料を要求します。  
-Symbolブロックチェーンでは、この手数料をXYMという共通トークンで支払うことになります。  
-アカウントを生成したら、この後の章から説明するトランザクションを実行するために必要な手数料を送信しておきます。  
+アカウントを作成しただけでは、ブロックチェーンにデータを送信することはできません。
+パブリックブロックチェーンはリソースを有効活用するためにデータ送信時に手数料を要求します。
+Symbolブロックチェーンでは、この手数料をXYMという共通トークンで支払うことになります。
+アカウントを生成したら、この後の章から説明するトランザクションを実行するために必要な手数料を送信しておきます。
 
 ### フォーセットから送信
 
-テストネットではフォーセット（蛇口）サービスから検証用のXYMを入手することができます。  
-メインネットの場合は取引所などでXYMを購入するか、投げ銭サービス(QUEST)などを利用して寄付を募りましょう。  
+テストネットではフォーセット（蛇口）サービスから検証用のXYMを入手することができます。
+メインネットの場合は取引所などでXYMを購入するか、投げ銭サービス(NEMLOG,QUEST)などを利用して寄付を募りましょう。
 
 テストネット
 - FAUCET(蛇口)
   - https://testnet.symbol.tools/
 
 メインネット
+- NEMLOG
+  - https://nemlog.nem.social/
 - QUEST
   - https://quest-bc.com/
-
-
 
 ### エクスプローラーで確認
 
@@ -170,8 +134,6 @@ Symbolブロックチェーンでは、この手数料をXYMという共通ト�
 ノードに保存されているアカウント情報を取得します。
 
 ### 所有モザイク一覧の取得
-
-#### v3
 
 ```js
 accountInfo = await fetch(
@@ -191,7 +153,7 @@ console.log(accountInfo);
 ###### 出力例
 
 ```js
-> {version: 1, address: '986F4982FE77894ABC3EBFDC16DFD4A5C2C7BC05BFD44ECE', addressHeight: '52812', publicKey: '0000000000000000000000000000000000000000000000000000000000000000', publicKeyHeight: '0', …}
+> {version: 1, address: '986F4982FE77894ABC3EBFDC16DFD4A5C2C7BC05BFD44ECE', addressHeight: '52812', publicKey: '0000000000000000000000000000000000000000000000000000000000000000', publicKeyHeight: '0', …}
     address: "986F4982FE77894ABC3EBFDC16DFD4A5C2C7BC05BFD44ECE"
     publicKey: "0000000000000000000000000000000000000000000000000000000000000000"
   > mosaics: Array(1)
@@ -203,12 +165,7 @@ console.log(accountInfo);
 #### publicKey
 クライアント側で作成しただけで、ブロックチェーンでまだ利用されていないアカウント情報は記録されていません。宛先として指定されて受信することで初めてアカウント情報が記録され、署名したトランザクションを送信することで公開鍵の情報が記録されます。そのため、publicKeyは現在`00000...`表記となっています。
 
-#### UInt64 ※v2 のみ
-
-JavaScriptでは大きすぎる数値はあふれてしまうため、idやamountはUInt64というsdkの独自フォーマットで管理されています。文字列に変換する場合は toString()、数値に変換する場合は compact()、16進数にする場合は toHex() で変換してください。
-
-
-#### v3
+#### BigInt
 
 v3 では UInt64 は定義されておらず、大きすぎる数値を表現するために JavaScript の `BigInt` が使用されています。
 以降の章で登場するため、ここで構文を紹介します。
@@ -222,10 +179,7 @@ BigInt(0x12345);
 
 #### 表示桁数の調整
 
-所有するトークンの量は誤差の発生を防ぐため、整数値で扱います。トークンの定義から可分性を取得することができるので、その値を使って正確な所有量を表示してみます。  
-
-
-#### v3
+所有するトークンの量は誤差の発生を防ぐため、整数値で扱います。トークンの定義から可分性を取得することができるので、その値を使って正確な所有量を表示してみます。
 
 ```js
 mosaicAmount = accountInfo.mosaics[0].amount;
@@ -254,11 +208,9 @@ console.log(displayAmount);
 ## 3.4 現場で使えるヒント
 ### 暗号化と署名
 
-アカウントとして生成した秘密鍵や公開鍵は、そのまま従来の暗号化や電子署名として活用することができます。信頼性に問題点があるアプリケーションを使用する必要がある場合も、個人間（エンドツーエンド）でデータの秘匿性・正当性を検証することができます。  
+アカウントとして生成した秘密鍵や公開鍵は、そのまま従来の暗号化や電子署名として活用することができます。信頼性に問題点があるアプリケーションを使用する必要がある場合も、個人間（エンドツーエンド）でデータの秘匿性・正当性を検証することができます。
 
 #### 事前準備：対話のためのBobアカウントを生成
-
-#### v3
 
 ```js
 bob = facade.createAccount(sdkCore.PrivateKey.random());
@@ -267,9 +219,6 @@ bob = facade.createAccount(sdkCore.PrivateKey.random());
 #### 暗号化
 
 Aliceの秘密鍵・Bobの公開鍵で暗号化し、Aliceの公開鍵・Bobの秘密鍵で復号します（AES-GCM形式）。
-
-
-#### v3
 
 ```js
 message = 'Hello Symbol!';
@@ -282,9 +231,6 @@ console.log(Buffer.from(encryptedMessage).toString("hex").toUpperCase());
 ```
 
 #### 復号化
-
-
-#### v3
 
 ```js
 decryptMessageData = bob.messageEncoder().tryDecode(alice.publicKey, Uint8Array.from(Buffer.from("0167AF68C3E7EFBD7048F6E9140FAA14256B64DD19FD0708EDCF17758A81FCC00084D869D6F1434A77AF", "hex"))); // 暗号化時のデータに置き換えてください
@@ -302,37 +248,9 @@ if (decryptMessageData.isDecoded) {
 > "Hello Symbol!"
 ```
 
-<details><summary>symbol-sdk v3.0.7 での注意点</summary>
-
-注意：
-v3.0.7 では復号化データの構造が異なります。
-v3.0.8 以降では、結果とメッセージを持つ **オブジェクト** ですが、v3.0.7 では結果とメッセージの **配列** です。
-このため、復号化したメッセージへのアクセス方法が異なります。
-
-##### v3.0.7
-
-```js
-if (decryptMessageData[0]) {
-  decryptMessage = new TextDecoder().decode(decryptMessageData[1]);
-  console.log(decryptMessage);
-} else {
-  console.log("decrypt failed!");
-}
-```
-
-```js
-> [true, Uint8Array(13)]
-> "Hello Symbol!"
-```
-
-</details>
-
 #### 署名
 
 Aliceの秘密鍵でメッセージを署名し、Aliceの公開鍵と署名でメッセージを検証します。
-
-
-#### v3
 
 ```js
 payload = Buffer.from("Hello Symbol!", 'utf-8');
@@ -345,9 +263,6 @@ console.log(signature.toString());
 ```
 
 #### 検証
-
-
-#### v3
 
 ```js
 v = new sdkSymbol.Verifier(alice.publicKey);
@@ -363,8 +278,8 @@ console.log(isVerified);
 
 ### アカウントの保管
 
-アカウントの管理方法について説明しておきます。  
-秘密鍵はそのままで保存しないようにしてください。symbol-qr-libraryを利用して秘密鍵をパスフレーズで暗号化して保存する方法を紹介します。  
+アカウントの管理方法について説明しておきます。
+秘密鍵はそのままで保存しないようにしてください。symbol-qr-libraryを利用して秘密鍵をパスフレーズで暗号化して保存する方法を紹介します。
 
 #### 秘密鍵の暗号化
 
@@ -408,4 +323,3 @@ console.log(signerQR.accountPrivateKey);
 ```js
 > 1E9139CC1580B4AED6A1FE110085281D4982ED0D89CE07F3380EB83069B1****
 ```
-
