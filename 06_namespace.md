@@ -10,22 +10,6 @@ Symbolブロックチェーンではネームスペースをレンタルして�
 
 ルートネームスペースを365日レンタルする場合の手数料を計算します。
 
-#### v2
-
-```js
-nwRepo = repo.createNetworkRepository();
-
-rentalFees = await nwRepo.getRentalFees().toPromise();
-rootNsperBlock = rentalFees.effectiveRootNamespaceRentalFeePerBlock.compact();
-rentalDays = 365;
-rentalBlock = rentalDays * 24 * 60 * 60 / 30;
-rootNsRenatalFeeTotal = rentalBlock * rootNsperBlock;
-console.log("rentalBlock:" + rentalBlock);
-console.log("rootNsRenatalFeeTotal:" + rootNsRenatalFeeTotal);
-```
-
-#### v3
-
 ```js
 rentalFees = await fetch(
   new URL('/network/fees/rental', NODE),
@@ -59,15 +43,6 @@ console.log("rootNsRenatalFeeTotal:" + rootNsRenatalFeeTotal);
 
 サブネームスペースの取得手数料を計算します。
 
-#### v2
-
-```js
-childNamespaceRentalFee = rentalFees.effectiveChildNamespaceRentalFee.compact()
-console.log(childNamespaceRentalFee);
-```
-
-#### v3
-
 ```js
 childNamespaceRentalFee = Number(rentalFees.effectiveChildNamespaceRentalFee);
 console.log(childNamespaceRentalFee);
@@ -83,22 +58,6 @@ console.log(childNamespaceRentalFee);
 ## 6.2 レンタル
 
 ルートネームスペースをレンタルします(例:xembook)
-
-#### v2
-
-```js
-
-tx = sym.NamespaceRegistrationTransaction.createRootNamespace(
-    sym.Deadline.create(epochAdjustment),
-    "xembook",
-    sym.UInt64.fromUint(86400),
-    networkType
-).setMaxFee(100);
-signedTx = alice.sign(tx,generationHash);
-await txRepo.announce(signedTx).toPromise();
-```
-
-#### v3
 
 ```js
 // ネームスペース設定
@@ -138,21 +97,6 @@ await fetch(
 
 サブネームスペースをレンタルします(例:xembook.tomato)
 
-#### v2
-
-```js
-subNamespaceTx = sym.NamespaceRegistrationTransaction.createSubNamespace(
-    sym.Deadline.create(epochAdjustment),
-    "tomato",  //作成するサブネームスペース
-    "xembook", //紐づけたいルートネームスペース
-    networkType,
-).setMaxFee(100);
-signedTx = alice.sign(subNamespaceTx,generationHash);
-await txRepo.announce(signedTx).toPromise();
-```
-
-#### v3
-
 ```js
 // ネームスペース設定
 parentNameId = sdkSymbol.generateNamespaceId("xembook"); // 紐づけたいルートネームスペース
@@ -191,19 +135,6 @@ await fetch(
 2階層目のサブネームスペースを作成したい場合は
 例えば、xembook.tomato.morningを定義したい場合は以下のようにします。
 
-#### v2
-
-```js
-subNamespaceTx = sym.NamespaceRegistrationTransaction.createSubNamespace(
-    ,
-    "morning",  //作成するサブネームスペース
-    "xembook.tomato", //紐づけたいルートネームスペース
-    ,
-)
-```
-
-#### v3
-
 ```js
 // ネームスペース設定
 rootNameId = sdkSymbol.generateNamespaceId("xembook"); // ルートネームスペース
@@ -216,25 +147,6 @@ name = "morning";  // 作成するサブネームスペース
 ### 有効期限の計算
 
 レンタル済みルートネームスペースの有効期限を計算します。
-
-#### v2
-
-```js
-nsRepo = repo.createNamespaceRepository();
-chainRepo = repo.createChainRepository();
-blockRepo = repo.createBlockRepository();
-
-namespaceId = new sym.NamespaceId("xembook");
-nsInfo = await nsRepo.getNamespace(namespaceId).toPromise();
-lastHeight = (await chainRepo.getChainInfo().toPromise()).height;
-lastBlock = await blockRepo.getBlockByHeight(lastHeight).toPromise();
-remainHeight = nsInfo.endHeight.compact() - lastHeight.compact();
-
-endDate = new Date(lastBlock.timestamp.compact() + remainHeight * 30000 + epochAdjustment * 1000)
-console.log(endDate);
-```
-
-#### v3
 
 ```js
 namespaceIds = sdkSymbol.generateNamespacePath("xembook"); // ルートネームスペース
@@ -289,27 +201,10 @@ console.log(endDate);
 ```js
 > Tue Mar 29 2022 18:17:06 GMT+0900 (日本標準時)
 ```
+
 ## 6.3 リンク
 
 ### アカウントへのリンク
-
-#### v2
-
-```js
-namespaceId = new sym.NamespaceId("xembook");
-address = sym.Address.createFromRawAddress("TBIL6D6RURP45YQRWV6Q7YVWIIPLQGLZQFHWFEQ");
-tx = sym.AliasTransaction.createForAddress(
-    sym.Deadline.create(epochAdjustment),
-    sym.AliasAction.Link,
-    namespaceId,
-    address,
-    networkType
-).setMaxFee(100);
-signedTx = alice.sign(tx,generationHash);
-await txRepo.announce(signedTx).toPromise();
-```
-
-#### v3
 
 ```js
 // リンクするネームスペースとアドレスの設定
@@ -351,24 +246,6 @@ await fetch(
 
 ### モザイクへリンク
 
-#### v2
-
-```js
-namespaceId = new sym.NamespaceId("xembook.tomato");
-mosaicId = new sym.MosaicId("3A8416DB2D53xxxx");
-tx = sym.AliasTransaction.createForMosaic(
-    sym.Deadline.create(epochAdjustment),
-    sym.AliasAction.Link,
-    namespaceId,
-    mosaicId,
-    networkType
-).setMaxFee(100);
-signedTx = alice.sign(tx,generationHash);
-await txRepo.announce(signedTx).toPromise();
-```
-
-#### v3
-
 ```js
 // リンクするネームスペースとモザイクの設定
 namespaceIds = sdkSymbol.generateNamespacePath("xembook.tomato");
@@ -407,28 +284,10 @@ await fetch(
 
 モザイクを作成したアドレスと同一の場合のみリンクできるようです。
 
-
 ## 6.4 未解決で使用
 
 送信先にUnresolvedAccountとして指定して、アドレスを特定しないままトランザクションを署名・アナウンスします。
 チェーン側で解決されたアカウントに対しての送信が実施されます。
-
-#### v2
-
-```js
-namespaceId = new sym.NamespaceId("xembook");
-tx = sym.TransferTransaction.create(
-    sym.Deadline.create(epochAdjustment),
-    namespaceId, //UnresolvedAccount:未解決アカウントアドレス
-    [],
-    sym.EmptyMessage,
-    networkType
-).setMaxFee(100);
-signedTx = alice.sign(tx,generationHash);
-await txRepo.announce(signedTx).toPromise();
-```
-
-#### v3
 
 ```js
 // UnresolvedAccount 導出
@@ -467,28 +326,6 @@ await fetch(
 ```
 
 送信モザイクにUnresolvedMosaicとして指定して、モザイクIDを特定しないままトランザクションを署名・アナウンスします。
-
-#### v2
-
-```js
-namespaceId = new sym.NamespaceId("xembook.tomato");
-tx = sym.TransferTransaction.create(
-    sym.Deadline.create(epochAdjustment),
-    address, 
-    [
-        new sym.Mosaic(
-          namespaceId,//UnresolvedMosaic:未解決モザイク
-          sym.UInt64.fromUint(1) //送信量
-        )
-    ],
-    sym.EmptyMessage,
-    networkType
-).setMaxFee(100);
-signedTx = alice.sign(tx,generationHash);
-await txRepo.announce(signedTx).toPromise();
-```
-
-#### v3
 
 ```js
 // address = new sdkSymbol.Address("*****");
@@ -532,21 +369,6 @@ await fetch(
 
 XYMをネームスペースで使用する場合は以下のように指定します。
 
-#### v2
-
-```js
-namespaceId = new sym.NamespaceId("symbol.xym");
-```
-```js
-> NamespaceId {fullName: 'symbol.xym', id: Id}
-    fullName: "symbol.xym"
-    id: Id {lower: 1106554862, higher: 3880491450}
-```
-
-Idは内部ではUint64と呼ばれる数値 `{lower: 1106554862, higher: 3880491450}` で保持されています。
-
-#### v3
-
 ```js
 namespaceIds = sdkSymbol.generateNamespacePath("symbol.xym");
 namespaceId = namespaceIds[namespaceIds.length - 1];
@@ -558,34 +380,6 @@ namespaceId = namespaceIds[namespaceIds.length - 1];
 ## 6.5 参照
 
 アドレスへリンクしたネームスペースの参照します
-
-#### v2
-
-```js
-nsRepo = repo.createNamespaceRepository();
-
-namespaceInfo = await nsRepo.getNamespace(new sym.NamespaceId("xembook")).toPromise();
-console.log(namespaceInfo);
-```
-###### 出力例
-```js
-NamespaceInfo
-    active: true
-  > alias: AddressAlias
-        address: Address {address: 'TBIL6D6RURP45YQRWV6Q7YVWIIPLQGLZQFHWFEQ', networkType: 152}
-        mosaicId: undefined
-        type: 2 //AliasType
-    depth: 1
-    endHeight: UInt64 {lower: 500545, higher: 0}
-    index: 1
-    levels: [NamespaceId]
-    ownerAddress: Address {address: 'TBIL6D6RURP45YQRWV6Q7YVWIIPLQGLZQFHWFEQ', networkType: 152}
-    parentId: NamespaceId {id: Id}
-    registrationType: 0 //NamespaceRegistrationType
-    startHeight: UInt64 {lower: 324865, higher: 0}
-```
-
-#### v3
 
 ```js
 namespaceIds = sdkSymbol.generateNamespacePath("xembook");
@@ -636,35 +430,6 @@ NamespaceRegistrationTypeは以下の通りです。
 
 モザイクへリンクしたネームスペースを参照します。
 
-#### v2
-
-```js
-nsRepo = repo.createNamespaceRepository();
-
-namespaceInfo = await nsRepo.getNamespace(new sym.NamespaceId("xembook.tomato")).toPromise();
-console.log(namespaceInfo);
-```
-###### 出力例
-```js
-NamespaceInfo
-  > active: true
-    alias: MosaicAlias
-        address: undefined
-        mosaicId: MosaicId
-        id: Id {lower: 1360892257, higher: 309702839}
-        type: 1 //AliasType
-    depth: 2
-    endHeight: UInt64 {lower: 500545, higher: 0}
-    index: 1
-    levels: (2) [NamespaceId, NamespaceId]
-    ownerAddress: Address {address: 'TBIL6D6RURP45YQRWV6Q7YVWIIPLQGLZQFHWFEQ', networkType: 152}
-    parentId: NamespaceId {id: Id}
-    registrationType: 1 //NamespaceRegistrationType
-    startHeight: UInt64 {lower: 324865, higher: 0}
-```
-
-#### v3
-
 ```js
 namespaceIds = sdkSymbol.generateNamespacePath("xembook.tomato");
 nameId = namespaceIds[namespaceIds.length - 1];
@@ -707,23 +472,6 @@ console.log(namespaceInfo);
 
 アドレスに紐づけられたネームスペースを全て調べます。
 
-#### v2
-
-```js
-nsRepo = repo.createNamespaceRepository();
-
-accountNames = await nsRepo.getAccountsNames(
-  [sym.Address.createFromRawAddress("TBIL6D6RURP45YQRWV6Q7YVWIIPLQGLZQFHWFEQ")]
-).toPromise();
-
-namespaceIds = accountNames[0].names.map(name=>{
-  return name.namespaceId;
-});
-console.log(namespaceIds);
-```
-
-#### v3
-
 ```js
 body = {
   "addresses": [
@@ -748,23 +496,6 @@ console.log(namespaceIds);
 ```
 
 モザイクに紐づけられたネームスペースを全て調べます。
-
-#### v2
-
-```js
-nsRepo = repo.createNamespaceRepository();
-
-mosaicNames = await nsRepo.getMosaicsNames(
-  [new sym.MosaicId("72C0212E67A08BCE")]
-).toPromise();
-
-namespaceIds = mosaicNames[0].names.map(name=>{
-  return name.namespaceId;
-});
-console.log(namespaceIds);
-```
-
-#### v3
 
 ```js
 body = {
@@ -792,33 +523,6 @@ console.log(namespaceIds);
 ### レシートの参照
 
 トランザクションに使用されたネームスペースをブロックチェーン側がどう解決したかを確認します。
-
-#### v2
-
-```js
-receiptRepo = repo.createReceiptRepository();
-state = await receiptRepo.searchAddressResolutionStatements({height:179401}).toPromise();
-```
-###### 出力例
-```js
-data: Array(1)
-  0: ResolutionStatement
-    height: UInt64 {lower: 179401, higher: 0}
-    resolutionEntries: Array(1)
-      0: ResolutionEntry
-        resolved: Address {address: 'TBIL6D6RURP45YQRWV6Q7YVWIIPLQGLZQFHWFEQ', networkType: 152}
-        source: ReceiptSource {primaryId: 1, secondaryId: 0}
-    resolutionType: 0 //ResolutionType
-    unresolved: NamespaceId
-      id: Id {lower: 646738821, higher: 2754876907}
-```
-
-ResolutionTypeは以下の通りです。
-```js
-{0: 'Address', 1: 'Mosaic'}
-```
-
-#### v3
 
 v3 では、ネームスペースを紐づけている対象によってアクセスする際のURLが異なります。
 
@@ -896,10 +600,8 @@ Symbol上のアカウントのブランド価値を構築することができ�
 (法的な効力については調整が必要です)。
 外部ドメイン側のハッキングあるいは、Symbol側でのネームスペース更新忘れにはご注意ください。
 
-
 #### ネームスペースを取得するアカウントについての注意
 ネームスペースはレンタル期限という概念をもつ機能です。
 今のところ、取得したネームスペースは放棄か延長の選択肢しかありません。
 運用譲渡などが発生する可能性のあるシステムでネームスペース活用を検討する場合は
 マルチシグ化(9章)したアカウントでネームスペースを取得することをおすすめします。
-
