@@ -62,7 +62,11 @@ document.getElementsByTagName('head')[0].appendChild(script);
 
 const NODE = window.origin; // 現在開いているページのURL
 const Buffer = buffer.Buffer;
+```
 
+続いて、ほぼすべての章で利用する共通ロジック部分を実行しておきます。
+
+```js
 // ネットワーク情報
 fetch(new URL('/node/info', NODE), { method: 'GET', headers: { 'Content-Type': 'application/json' } })
   .then((res) => res.json())
@@ -89,6 +93,7 @@ function clog(signedTx){
   console.log("https://symbol.fyi/transactions/" + hash);
   console.log("https://testnet.symbol.fyi/transactions/" + hash);
 }
+```
 
 これで準備完了です。
 
