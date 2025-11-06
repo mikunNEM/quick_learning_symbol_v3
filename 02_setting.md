@@ -1,82 +1,97 @@
-# 2. 環境構築（v3版）
+2. 環境構築
 
-## 2.1 使用言語
+本書の読み進め方について解説します。
 
-JavaScript を使用します。  
+2.1 使用言語
 
-### SDK
-- **symbol-sdk v3 系**  
-  https://github.com/symbol/symbol-sdk  
+JavaScriptを使用します。
 
-アルファ版としてリリースされており、rxjs 依存の多くの機能が削除されています。  
-そのため、**REST API への直接アクセス**が推奨されます。  
+SDK
 
-### リファレンス
-- [Symbol SDK for TypeScript and JavaScript](https://symbol.github.io/symbol-sdk-typescript-javascript/1.0.3/)  
-- [Catapult REST Endpoints (1.0.3)](https://symbol.github.io/symbol-openapi/v1.0.3/)  
+symbol-sdk v3.3.0
+https://github.com/symbol/symbol-sdk
 
----
+v3では、rxjsに依存した多くの機能が削除され、REST APIへの直接アクセスが推奨されます。
 
-## 2.2 サンプルソースコード
+リファレンス
 
-### 変数宣言
-検証しやすいように `const` は使用しません。  
-実際のアプリ開発ではセキュリティ確保のため `const` を利用してください。  
+Symbol SDK for TypeScript and JavaScript
+https://symbol.github.io/symbol-sdk-typescript-javascript/1.0.3/
 
-### 出力値確認
-変数の内容確認には `console.log()` を使用します。  
+Catapult REST Endpoints (1.0.3)
+https://symbol.github.io/symbol-openapi/v1.0.3/
 
-### 同期・非同期
-特に問題が無い限り同期処理で解説します。  
+2.2 サンプルソースコード
+変数宣言
 
-### アカウント
-- **Alice**：メインのアカウント  
-- **Bob**：送受信用のアカウント（その他、必要に応じて Carol なども利用）  
+console上で何度も書き直して動作検証をして欲しいため、あえてconst宣言を行いません。
+アプリケーション開発時はconst宣言するなどしてセキュリティを確保してください。
 
-### 手数料
-手数料乗数は **100** でトランザクションを作成します。  
+出力値確認
 
----
+console.log() で変数の内容を出力します。好みに応じた出力関数に読み替えてお試しください。
+出力内容は > 以下に記述しています。サンプルを実行する場合はこの部分を含まずに試してください。
 
-## 2.3 事前準備
+同期・非同期
 
-- **テストネット**  
-  https://symbolnodes.org/nodes_testnet/  
+他言語に慣れた開発者の方には非同期処理の書き方に抵抗がある人もいると思うので、特に問題が無い限り非同期処理を使わずに解説します。
 
-- **メインネット**  
-  https://symbolnodes.org/nodes/  
+アカウント
+Alice
 
-Chrome などでノードページを開き、F12 キーで開発者コンソールを開いて以下を入力します。  
+本書では主にAliceアカウントを中心として解説します。
+3章で作成したAliceをその後の章でも引き続き使いますので、十分なXYMを送信した状態でお読みください。
 
-### SDK 読み込み（v3）
+Bob
 
-```js
-const SDK_VERSION = "3.2.3";
+Aliceとの送受信用のアカウントとして各章で必要に応じて作成します。その他、マルチシグの章などでCarolなどを使用します。
+
+手数料
+
+本書で紹介するトランザクションの手数料乗数は 100 でトランザクションを作成します。
+
+2.3 事前準備
+
+ノード一覧より任意のノードのページをChromeブラウザなどで開きます。本書ではテストネットを前提として解説しています。
+
+テストネット
+https://symbolnodes.org/nodes_testnet/
+
+メインネット
+https://symbolnodes.org/nodes/
+
+F12キーを押して開発者コンソールを開き、以下のスクリプトを入力します。
+
+v3
+const SDK_VERSION = "3.3.0";
 const sdk = await import(`https://www.unpkg.com/symbol-sdk@${SDK_VERSION}/dist/bundle.web.js`);
 const sdkCore = sdk.core;
 const sdkSymbol = sdk.symbol;
 
-// Buffer を読み込む
+// Buffer を読み込んでおく
 (script = document.createElement('script')).src = 'https://bundle.run/buffer@6.0.3';
 document.getElementsByTagName('head')[0].appendChild(script);
 
-const NODE = window.origin; // 現在開いているページのURL
-const Buffer = buffer.Buffer;
-```
 
 続いて、ほぼすべての章で利用する共通ロジック部分を実行しておきます。
 
-```js
-// ネットワーク情報
-fetch(new URL('/node/info', NODE), { method: 'GET', headers: { 'Content-Type': 'application/json' } })
+const NODE = window.origin; // 現在開いているページのURLがここに入ります
+const Buffer = buffer.Buffer;
+
+fetch(new URL('/node/info', NODE), {
+  method: 'GET',
+  headers: { 'Content-Type': 'application/json' },
+})
   .then((res) => res.json())
   .then((json) => {
     networkType = json.networkIdentifier;
     generationHash = json.networkGenerationHashSeed;
   });
 
-// プロパティ情報
-fetch(new URL('/network/properties', NODE), { method: 'GET', headers: { 'Content-Type': 'application/json' } })
+fetch(new URL('/network/properties', NODE), {
+  method: 'GET',
+  headers: { 'Content-Type': 'application/json' },
+})
   .then((res) => res.json())
   .then((json) => {
     e = json.network.epochAdjustment;
@@ -85,15 +100,13 @@ fetch(new URL('/network/properties', NODE), { method: 'GET', headers: { 'Content
     facade = new sdkSymbol.SymbolFacade(identifier); // v3 only
   });
 
-// トランザクション確認用
-function clog(signedTx){
+function clog(signedTx) {
   hash = facade.hashTransaction(signedTx).toString();
   console.log(NODE + "/transactionStatus/" + hash);
   console.log(NODE + "/transactions/confirmed/" + hash);
   console.log("https://symbol.fyi/transactions/" + hash);
   console.log("https://testnet.symbol.fyi/transactions/" + hash);
 }
-```
+
 
 これで準備完了です。
-
