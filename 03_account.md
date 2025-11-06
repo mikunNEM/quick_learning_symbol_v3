@@ -320,6 +320,8 @@ if (decryptMessageData[0]) {
 
 #### 署名
 
+Aliceの秘密鍵でメッセージを署名し、Aliceの公開鍵と署名でメッセージを検証します。
+
 #### v3
 
 ```js
