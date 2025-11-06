@@ -8,6 +8,8 @@
 
 ### 新規生成
 
+#### v3
+
 ```js
 alice = facade.createAccount(sdkCore.PrivateKey.random());
 console.log(alice);
@@ -56,6 +58,8 @@ console.log(aliceAddress);
 
 ### 秘密鍵と公開鍵の導出
 
+#### v3
+
 ```js
 console.log(alice.keyPair.privateKey.toString());
 console.log(alice.publicKey.toString());
@@ -72,6 +76,8 @@ console.log(alice.publicKey.toString());
 
 ### アドレスの導出
 
+#### v3
+
 ```js
 aliceRawAddress = alice.address.toString();
 console.log(aliceRawAddress);
@@ -81,13 +87,19 @@ console.log(aliceRawAddress);
 > TBXUTAX6O6EUVPB6X7OBNX6UUXBMPPAFX7KE5TQ
 ```
 
+これらがブロックチェーンを操作するための最も基本的な情報となります。また、秘密鍵からアカウントを生成したり、公開鍵やアドレスのみを扱うクラスの生成方法も確認しておきましょう。  
+
 ### 秘密鍵からアカウント生成
+
+#### v3
 
 ```js
 alice = facade.createAccount(new sdkCore.PrivateKey("1E9139CC1580B4AED6A1FE110085281D4982ED0D89CE07F3380EB83069B1****"));
 ```
 
 ### 公開鍵クラスの生成
+
+#### v3
 
 ```js
 alicePublicAccount = facade.createPublicAccount(new sdkCore.PublicKey("D4933FC1E4C56F9DF9314E9E0533173E1AB727BDB2A04B59F048124E93BEFBD2"));
@@ -107,6 +119,8 @@ console.log(alicePublicAccount);
 ```
 
 ### アドレスクラスの生成
+
+#### v3
 
 ```js
 aliceAddress = new sdkSymbol.Address("TBXUTAX6O6EUVPB6X7OBNX6UUXBMPPAFX7KE5TQ");
@@ -154,6 +168,8 @@ Symbolブロックチェーンでは、この手数料をXYMという共通ト�
 
 ノードに保存されているアカウント情報を取得します。
 
+#### v3
+
 ```js
 accountInfo = await fetch(
   new URL('/accounts/' + aliceAddress.toString(), NODE),
@@ -184,6 +200,8 @@ console.log(accountInfo);
 #### publicKey
 クライアント側で作成しただけで、ブロックチェーンでまだ利用されていないアカウント情報は記録されていません。宛先として指定されて受信することで初めてアカウント情報が記録され、署名したトランザクションを送信することで公開鍵の情報が記録されます。そのため、publicKeyは現在`00000...`表記となっています。
 
+#### v3
+
 v3 では UInt64 は定義されておらず、大きすぎる数値を表現するために JavaScript の `BigInt` が使用されています。
 以降の章で登場するため、ここで構文を紹介します。
 
@@ -195,6 +213,10 @@ BigInt(0x12345);
 ```
 
 #### 表示桁数の調整
+
+所有するトークンの量は誤差の発生を防ぐため、整数値で扱います。トークンの定義から可分性を取得することができるので、その値を使って正確な所有量を表示してみます。  
+
+#### v3
 
 ```js
 mosaicAmount = accountInfo.mosaics[0].amount;
@@ -227,6 +249,8 @@ console.log(displayAmount);
 
 #### 事前準備：対話のためのBobアカウントを生成
 
+#### v3
+
 ```js
 bob = facade.createAccount(sdkCore.PrivateKey.random());
 ```
@@ -234,6 +258,8 @@ bob = facade.createAccount(sdkCore.PrivateKey.random());
 #### 暗号化
 
 Aliceの秘密鍵・Bobの公開鍵で暗号化し、Aliceの公開鍵・Bobの秘密鍵で復号します（AES-GCM形式）。
+
+#### v3
 
 ```js
 message = 'Hello Symbol!';
@@ -246,6 +272,8 @@ console.log(Buffer.from(encryptedMessage).toString("hex").toUpperCase());
 ```
 
 #### 復号化
+
+#### v3
 
 ```js
 decryptMessageData = bob.messageEncoder().tryDecode(alice.publicKey, Uint8Array.from(Buffer.from("0167AF68C3E7EFBD7048F6E9140FAA14256B64DD19FD0708EDCF17758A81FCC00084D869D6F1434A77AF", "hex"))); // 暗号化時のデータに置き換えてください
@@ -265,8 +293,12 @@ if (decryptMessageData.isDecoded) {
 
 <details><summary>symbol-sdk v3.0.7 での注意点</summary>
 
-v3.0.7 では復号化データの構造が異なります。  
-v3.0.8 以降ではオブジェクト、v3.0.7 では配列です。
+注意：
+v3.0.7 では復号化データの構造が異なります。
+v3.0.8 以降では、結果とメッセージを持つ **オブジェクト** ですが、v3.0.7 では結果とメッセージの **配列** です。
+このため、復号化したメッセージへのアクセス方法が異なります。
+
+##### v3.0.7
 
 ```js
 if (decryptMessageData[0]) {
@@ -277,9 +309,16 @@ if (decryptMessageData[0]) {
 }
 ```
 
+```js
+> [true, Uint8Array(13)]
+> "Hello Symbol!"
+```
+
 </details>
 
 #### 署名
+
+#### v3
 
 ```js
 payload = Buffer.from("Hello Symbol!", 'utf-8');
@@ -292,6 +331,8 @@ console.log(signature.toString());
 ```
 
 #### 検証
+
+#### v3
 
 ```js
 v = new sdkSymbol.Verifier(alice.publicKey);
@@ -307,6 +348,11 @@ console.log(isVerified);
 
 ### アカウントの保管
 
+アカウントの管理方法について説明しておきます。  
+秘密鍵はそのままで保存しないようにしてください。symbol-qr-libraryを利用して秘密鍵をパスフレーズで暗号化して保存する方法を紹介します。  
+
+#### 秘密鍵の暗号化
+
 ```js
 qr = require("/node_modules/symbol-qr-library");
 
@@ -317,6 +363,8 @@ signerQR = qr.QRCodeGenerator.createExportAccount(
 
 //QRコード表示
 signerQR.toBase64().subscribe(x =>{
+
+  //HTML body上にQRコードを表示する例
   (tag= document.createElement('img')).src = x;
   document.getElementsByTagName('body')[0].appendChild(tag);
 });
@@ -325,22 +373,22 @@ signerQR.toBase64().subscribe(x =>{
 jsonSignerQR = signerQR.toJSON();
 console.log(jsonSignerQR);
 ```
-
 ###### 出力例
 ```js
 > {"v":3,"type":2,"network_id":152,"chain_id":"7FCCD304802016BEBBCD342A332F91FF1F3BB5E902988B352697BE245F48E836","data":{"ciphertext":"e9e2f76cb482fd054bc13b7ca7c9d086E7VxeGS/N8n1WGTc5MwshNMxUiOpSV2CNagtc6dDZ7rVZcnHXrrESS06CtDTLdD7qrNZEZAi166ucDUgk4Yst0P/XJfesCpXRxlzzNgcK8Q=","salt":"54de9318a44cc8990e01baba1bcb92fa111d5bcc0b02ffc6544d2816989dc0e9"}}
 ```
+このjsonSignerQRで出力されるQRコード、あるいはテキストを保存しておけばいつでも秘密鍵を復元することができます。
 
 #### 暗号化された秘密鍵の復号
 
 ```js
+//保存しておいたテキスト、あるいはQRコードスキャンで得られたテキストをjsonSignerQRに代入
 jsonSignerQR = '{"v":3,"type":2,"network_id":152,"chain_id":"7FCCD304802016BEBBCD342A332F91FF1F3BB5E902988B352697BE245F48E836","data":{"ciphertext":"e9e2f76cb482fd054bc13b7ca7c9d086E7VxeGS/N8n1WGTc5MwshNMxUiOpSV2CNagtc6dDZ7rVZcnHXrrESS06CtDTLdD7qrNZEZAi166ucDUgk4Yst0P/XJfesCpXRxlzzNgcK8Q=","salt":"54de9318a44cc8990e01baba1bcb92fa111d5bcc0b02ffc6544d2816989dc0e9"}}';
 
 qr = require("/node_modules/symbol-qr-library");
 signerQR = qr.AccountQR.fromJSON(jsonSignerQR,"パスフレーズ");
 console.log(signerQR.accountPrivateKey);
 ```
-
 ###### 出力例
 ```js
 > 1E9139CC1580B4AED6A1FE110085281D4982ED0D89CE07F3380EB83069B1****
