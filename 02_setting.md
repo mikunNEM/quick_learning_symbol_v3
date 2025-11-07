@@ -60,7 +60,6 @@ Aliceとの送受信用のアカウントとして各章で必要に応じて作
 
 F12キーを押して開発者コンソールを開き、以下のスクリプトを入力します。
 
-#### v3
 
 ```js
 const SDK_VERSION = "3.3.0";
@@ -75,7 +74,6 @@ document.getElementsByTagName('head')[0].appendChild(script);
 
 続いて、ほぼすべての章で利用する共通ロジック部分を実行しておきます。
 
-#### v3
 
 ```js
 const NODE = window.origin; //現在開いているページのURLがここに入ります
