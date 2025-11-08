@@ -8,7 +8,6 @@
 
 ### 新規生成
 
-#### v3
 
 ```js
 alice = facade.createAccount(sdkCore.PrivateKey.random());
@@ -58,7 +57,6 @@ console.log(aliceAddress);
 
 ### 秘密鍵と公開鍵の導出
 
-#### v3
 
 ```js
 console.log(alice.keyPair.privateKey.toString());
@@ -76,7 +74,6 @@ console.log(alice.publicKey.toString());
 
 ### アドレスの導出
 
-#### v3
 
 ```js
 aliceRawAddress = alice.address.toString();
@@ -91,7 +88,6 @@ console.log(aliceRawAddress);
 
 ### 秘密鍵からアカウント生成
 
-#### v3
 
 ```js
 alice = facade.createAccount(new sdkCore.PrivateKey("1E9139CC1580B4AED6A1FE110085281D4982ED0D89CE07F3380EB83069B1****"));
@@ -99,7 +95,6 @@ alice = facade.createAccount(new sdkCore.PrivateKey("1E9139CC1580B4AED6A1FE11008
 
 ### 公開鍵クラスの生成
 
-#### v3
 
 ```js
 alicePublicAccount = facade.createPublicAccount(new sdkCore.PublicKey("D4933FC1E4C56F9DF9314E9E0533173E1AB727BDB2A04B59F048124E93BEFBD2"));
@@ -120,7 +115,6 @@ console.log(alicePublicAccount);
 
 ### アドレスクラスの生成
 
-#### v3
 
 ```js
 aliceAddress = new sdkSymbol.Address("TBXUTAX6O6EUVPB6X7OBNX6UUXBMPPAFX7KE5TQ");
@@ -143,15 +137,14 @@ Symbolブロックチェーンでは、この手数料をXYMという共通ト�
 ### フォーセットから送信
 
 テストネットではフォーセット（蛇口）サービスから検証用のXYMを入手することができます。  
-メインネットの場合は取引所などでXYMを購入するか、投げ銭サービス(NEMLOG,QUEST)などを利用して寄付を募りましょう。  
+メインネットの場合は取引所などでXYMを購入するか、投げ銭サービス(QUEST)などを利用して寄付を募りましょう。  
 
 テストネット
 - FAUCET(蛇口)
   - https://testnet.symbol.tools/
 
 メインネット
-- NEMLOG
-  - https://nemlog.nem.social/
+
 - QUEST
   - https://quest-bc.com/
 
@@ -170,7 +163,6 @@ Symbolブロックチェーンでは、この手数料をXYMという共通ト�
 
 ### 所有モザイク一覧の取得
 
-#### v3
 
 ```js
 accountInfo = await fetch(
@@ -202,7 +194,6 @@ console.log(accountInfo);
 #### publicKey
 クライアント側で作成しただけで、ブロックチェーンでまだ利用されていないアカウント情報は記録されていません。宛先として指定されて受信することで初めてアカウント情報が記録され、署名したトランザクションを送信することで公開鍵の情報が記録されます。そのため、publicKeyは現在`00000...`表記となっています。
 
-#### v3
 
 v3 では UInt64 は定義されておらず、大きすぎる数値を表現するために JavaScript の `BigInt` が使用されています。
 以降の章で登場するため、ここで構文を紹介します。
@@ -218,7 +209,6 @@ BigInt(0x12345);
 
 所有するトークンの量は誤差の発生を防ぐため、整数値で扱います。トークンの定義から可分性を取得することができるので、その値を使って正確な所有量を表示してみます。  
 
-#### v3
 
 ```js
 mosaicAmount = accountInfo.mosaics[0].amount;
@@ -251,7 +241,6 @@ console.log(displayAmount);
 
 #### 事前準備：対話のためのBobアカウントを生成
 
-#### v3
 
 ```js
 bob = facade.createAccount(sdkCore.PrivateKey.random());
@@ -261,7 +250,6 @@ bob = facade.createAccount(sdkCore.PrivateKey.random());
 
 Aliceの秘密鍵・Bobの公開鍵で暗号化し、Aliceの公開鍵・Bobの秘密鍵で復号します（AES-GCM形式）。
 
-#### v3
 
 ```js
 message = 'Hello Symbol!';
@@ -275,7 +263,6 @@ console.log(Buffer.from(encryptedMessage).toString("hex").toUpperCase());
 
 #### 復号化
 
-#### v3
 
 ```js
 decryptMessageData = bob.messageEncoder().tryDecode(alice.publicKey, Uint8Array.from(Buffer.from("0167AF68C3E7EFBD7048F6E9140FAA14256B64DD19FD0708EDCF17758A81FCC00084D869D6F1434A77AF", "hex"))); // 暗号化時のデータに置き換えてください
@@ -293,36 +280,12 @@ if (decryptMessageData.isDecoded) {
 > "Hello Symbol!"
 ```
 
-<details><summary>symbol-sdk v3.0.7 での注意点</summary>
 
-注意：
-v3.0.7 では復号化データの構造が異なります。
-v3.0.8 以降では、結果とメッセージを持つ **オブジェクト** ですが、v3.0.7 では結果とメッセージの **配列** です。
-このため、復号化したメッセージへのアクセス方法が異なります。
-
-##### v3.0.7
-
-```js
-if (decryptMessageData[0]) {
-  decryptMessage = new TextDecoder().decode(decryptMessageData[1]);
-  console.log(decryptMessage);
-} else {
-  console.log("decrypt failed!");
-}
-```
-
-```js
-> [true, Uint8Array(13)]
-> "Hello Symbol!"
-```
-
-</details>
 
 #### 署名
 
 Aliceの秘密鍵でメッセージを署名し、Aliceの公開鍵と署名でメッセージを検証します。
 
-#### v3
 
 ```js
 payload = Buffer.from("Hello Symbol!", 'utf-8');
@@ -336,7 +299,6 @@ console.log(signature.toString());
 
 #### 検証
 
-#### v3
 
 ```js
 v = new sdkSymbol.Verifier(alice.publicKey);

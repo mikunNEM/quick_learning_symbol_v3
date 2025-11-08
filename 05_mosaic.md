@@ -95,7 +95,7 @@ embeddedTransactions = [
 ];
 
 // アグリゲートTx作成
-descriptor = new sdkSymbol.descriptors.AggregateCompleteTransactionV2Descriptor(
+descriptor = new sdkSymbol.descriptors.AggregateCompleteTransactionV3Descriptor(
   facade.static.hashEmbeddedTransactions(embeddedTransactions),
   embeddedTransactions
 );
@@ -355,7 +355,7 @@ embeddedTransactions = [
 ];
 
 // モザイクの生成とNFTデータをアグリゲートしてブロックに登録
-descriptor = new sdkSymbol.descriptors.AggregateCompleteTransactionV2Descriptor(
+descriptor = new sdkSymbol.descriptors.AggregateCompleteTransactionV3Descriptor(
   facade.static.hashEmbeddedTransactions(embeddedTransactions),
   embeddedTransactions
 );
