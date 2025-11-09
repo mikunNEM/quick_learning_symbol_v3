@@ -42,7 +42,7 @@ embeddedTransactions = [
 ];
 
 // アグリゲートTx作成
-aggregateDescriptor = new sdkSymbol.descriptors.AggregateCompleteTransactionV2Descriptor(
+aggregateDescriptor = new sdkSymbol.descriptors.AggregateCompleteTransactionV3Descriptor(
   facade.static.hashEmbeddedTransactions(embeddedTransactions),
   embeddedTransactions
 );
@@ -83,7 +83,7 @@ console.log(tx);
 
 ###### 出力例
 ```js
-> AggregateBondedTransactionV2 
+> AggregateBondedTransactionV3 
     _aggregateTransactionHeaderReserved_1: 0
     _cosignatures: []
     _deadline: Timestamp {size: 8, isSigned: false, value: 22883170004n}

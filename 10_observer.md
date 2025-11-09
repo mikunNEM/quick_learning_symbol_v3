@@ -5,6 +5,15 @@ SymbolのノードはWebSocket通信でブロックチェーンの状態変化�
 
 WebSocketを生成してリスナーの設定を行います。
 
+エンドポイントのフォーマットは以下の通りです。
+
+- wss://{node url}:3001/ws
+
+何も通信が無ければ、listenerは1分で切断されます。
+
+
+v2 におけるリスナーは rxjs に依存した機能であるため、 v3 ではリスナーの機能はありません。 したがって、実装者がWebSocketクライアントをプログラミングする必要があります。 本章では、 v2 の実装を参考にした一例を示します。
+
 ```js
 // チャンネル名
 ListenerChannelName = {
@@ -64,11 +73,6 @@ listener.onclose = function(closeEvent) {
   console.log(closeEvent);
 };
 ```
-
-エンドポイントのフォーマットは以下の通りです。
-- wss://{node url}:3001/ws
-
-何も通信が無ければ、listenerは1分で切断されます。
 
 ## 10.2 受信検知
 
@@ -173,7 +177,7 @@ listener.send(JSON.stringify({
       hash: "88277C8A9B45D075BF554DA5DAA24667DAE844DE1C583DFB4A5891822BE9A0DB"
 ```
 
-listener.newBlock()をしておくと、約30秒ごとに通信が発生するのでWebSocketの切断が起こりにくくなります。  
+ブロック生成の検知をしておくと、約30秒ごとに通信が発生するのでWebSocketの切断が起こりにくくなります。  
 まれに、ブロック生成が1分を超える場合があるのでその場合はリスナーを再接続する必要があります。
 （その他の事象で切断される可能性もあるので、万全を期したい場合は後述するoncloseで補足しましょう）
 

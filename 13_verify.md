@@ -39,7 +39,7 @@ console.log(tx);
 ###### 出力例
 ```js
 > Hash256 {bytes: Uint8Array(32)}
-> AggregateCompleteTransactionV2
+> AggregateCompleteTransactionV3
   > cosignatures: Array(1)
     > 0: Cosignature
         signature: Signature {bytes: Uint8Array(64)}
@@ -91,7 +91,7 @@ if (tx.cosignatures !== undefined && tx.cosignatures.length > 0) {
   }
   merkleComponentHash = sdkCore.utils.uint8ToHex(hasher.digest());
 }
-console.log(merkleComponentHash);
+console.log(merkleComponentHash.toString());
 ```
 
 ###### 出力例
@@ -106,7 +106,7 @@ console.log(merkleComponentHash);
 
 ```js
 //トランザクションから計算
-leaf = new sdkCore.Hash256(merkleComponentHash);
+leaf = new sdkCore.Hash256(merkleComponentHash.toString());
 
 //ノードから取得
 HRoot = await fetch(
@@ -121,7 +121,7 @@ HRoot = await fetch(
   return new sdkCore.Hash256(json.block.transactionsHash);
 });
 merkleProof = await fetch(
-  new URL('/blocks/' + height + '/transactions/' + leaf + '/merkle', NODE),
+  new URL('/blocks/' + height + '/transactions/' + leaf.toString() + '/merkle', NODE),
   {
     method: 'GET',
     headers: { 'Content-Type': 'application/json' },

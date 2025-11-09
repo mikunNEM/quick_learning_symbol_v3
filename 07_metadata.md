@@ -67,7 +67,7 @@ embeddedTransactions = [
 ];
 
 // アグリゲートTx作成
-aggregateDescriptor = new sdkSymbol.descriptors.AggregateCompleteTransactionV2Descriptor(
+aggregateDescriptor = new sdkSymbol.descriptors.AggregateCompleteTransactionV3Descriptor(
   facade.static.hashEmbeddedTransactions(embeddedTransactions),
   embeddedTransactions
 );
@@ -153,7 +153,7 @@ embeddedTransactions = [
 ];
 
 // アグリゲートTx作成
-aggregateDescriptor = new sdkSymbol.descriptors.AggregateCompleteTransactionV2Descriptor(
+aggregateDescriptor = new sdkSymbol.descriptors.AggregateCompleteTransactionV3Descriptor(
   facade.static.hashEmbeddedTransactions(embeddedTransactions),
   embeddedTransactions
 );
@@ -198,9 +198,9 @@ bobの秘密鍵が分からない場合はこの後の章で説明する
 
 ```js
 // ターゲットと作成者アドレスの設定
-targetMosaic = 0x1275B0B7511D9161n;  // メタデータ記録先モザイク
+targetMosaic = "1275B0B7511D9161";  // メタデータ記録先モザイク
 mosaicInfo = await fetch(
-new URL('/mosaics/' + targetMosaic.toString(16).toUpperCase(), NODE),
+new URL('/mosaics/' + targetMosaic.toUpperCase(), NODE),
   {
     method: 'GET',
     headers: { 'Content-Type': 'application/json' },
@@ -245,7 +245,7 @@ if (metadataInfo.length > 0) {
 descriptor = new sdkSymbol.descriptors.MosaicMetadataTransactionV1Descriptor(  // Txタイプ:モザイクメタデータ登録Tx
   targetAddress,  // ターゲットアドレス
   key,            // キー
-  new sdkSymbol.models.UnresolvedMosaicId(targetMosaic),  // メタデータ記録先モザイク
+  new sdkSymbol.models.UnresolvedMosaicId(BigInt('0x' + targetMosaic)),  // メタデータ記録先モザイク
   sizeDelta,      // サイズ差分
   value           // 値
 );
@@ -259,7 +259,7 @@ embeddedTransactions = [
 ];
 
 // アグリゲートTx作成
-aggregateDescriptor = new sdkSymbol.descriptors.AggregateCompleteTransactionV2Descriptor(
+aggregateDescriptor = new sdkSymbol.descriptors.AggregateCompleteTransactionV3Descriptor(
   facade.static.hashEmbeddedTransactions(embeddedTransactions),
   embeddedTransactions
 );
@@ -357,7 +357,7 @@ embeddedTransactions = [
 ];
 
 // アグリゲートTx作成
-aggregateDescriptor = new sdkSymbol.descriptors.AggregateCompleteTransactionV2Descriptor(
+aggregateDescriptor = new sdkSymbol.descriptors.AggregateCompleteTransactionV3Descriptor(
   facade.static.hashEmbeddedTransactions(embeddedTransactions),
   embeddedTransactions
 );

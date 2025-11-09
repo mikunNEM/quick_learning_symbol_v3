@@ -58,6 +58,12 @@ await fetch(
 });
 ```
 
+AddressRestrictionFlagについては以下の通りです。
+
+```js
+{1: 'AllowIncomingAddress', 16385: 'AllowOutgoingAddress', 32769: 'BlockIncomingAddress', 49153: 'BlockOutgoingAddress'}
+```
+
 `restrictionFlags` は v2 の `AddressRestrictionFlag` に相当します。
 `AddressRestrictionFlag` との対応は以下の通りです。
 
@@ -112,6 +118,12 @@ await fetch(
 });
 ```
 
+MosaicRestrictionFlagについては以下の通りです。
+
+```js
+{2: 'AllowMosaic', 32770: 'BlockMosaic'}
+```
+
 アカウント制限と同様、 `restrictionFlags` は v2 の `MosaicRestrictionFlag` に相当します。
 `MosaicRestrictionFlag` との対応は以下の通りです。
 
@@ -163,6 +175,12 @@ await fetch(
 .then((json) => {
   return json;
 });
+```
+
+OperationRestrictionFlagについては以下の通りです。
+
+```js
+{16388: 'AllowOutgoingTransactionType', 49156: 'BlockOutgoingTransactionType'}
 ```
 
 アカウント制限やモザイク制限と同様、 `restrictionFlags` は v2 の `OperationRestrictionFlag` に相当します。
@@ -313,7 +331,7 @@ embeddedTransactions = [
 ];
 
 // アグリゲートTx作成
-aggregateDescriptor = new sdkSymbol.descriptors.AggregateCompleteTransactionV2Descriptor(
+aggregateDescriptor = new sdkSymbol.descriptors.AggregateCompleteTransactionV3Descriptor(
   facade.static.hashEmbeddedTransactions(embeddedTransactions),
   embeddedTransactions
 );
@@ -395,7 +413,8 @@ await fetch(
 .then((json) => {
   return json;
 });
-
+```
+```js
 bob = facade.createAccount(sdkCore.PrivateKey.random());
 
 // Bobに適用
@@ -526,7 +545,10 @@ await fetch(
 .then((json) => {
   return json;
 });
+```
 
+
+```js
 // 失敗（CarolからDaveに送信）
 dave = facade.createAccount(sdkCore.PrivateKey.random());
 // Tx作成

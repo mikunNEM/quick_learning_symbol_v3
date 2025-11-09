@@ -37,7 +37,7 @@ tx1 = facade.createEmbeddedTransactionFromTypedDescriptor(
 descriptor2 = new sdkSymbol.descriptors.TransferTransactionV1Descriptor(  // Txタイプ:転送Tx
   alice.address,    // Aliceへの送信
   [],
-  new TextEncoder('utf-8').encode('thank you!') // 平文メッセージ
+  new TextEncoder('utf-8').encode('\0thank you!') // 平文メッセージ
 );
 tx2 = facade.createEmbeddedTransactionFromTypedDescriptor(
   descriptor2,      // トランザクション Descriptor 設定
@@ -50,7 +50,7 @@ embeddedTransactions = [
 ];
 
 // アグリゲートTx作成
-aggregateDescriptor = new sdkSymbol.descriptors.AggregateBondedTransactionV2Descriptor(
+aggregateDescriptor = new sdkSymbol.descriptors.AggregateBondedTransactionV3Descriptor(
   facade.static.hashEmbeddedTransactions(embeddedTransactions),
   embeddedTransactions
 );

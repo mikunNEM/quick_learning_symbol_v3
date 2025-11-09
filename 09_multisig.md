@@ -70,7 +70,7 @@ embeddedTransactions = [
 ];
 
 // アグリゲートTx作成
-aggregateDescriptor = new sdkSymbol.descriptors.AggregateCompleteTransactionV2Descriptor(
+aggregateDescriptor = new sdkSymbol.descriptors.AggregateCompleteTransactionV3Descriptor(
   facade.static.hashEmbeddedTransactions(embeddedTransactions),
   embeddedTransactions
 );
@@ -218,7 +218,7 @@ embeddedTransactions = [
 ];
 
 // アグリゲートTx作成
-aggregateDescriptor = new sdkSymbol.descriptors.AggregateCompleteTransactionV2Descriptor(
+aggregateDescriptor = new sdkSymbol.descriptors.AggregateCompleteTransactionV3Descriptor(
   facade.static.hashEmbeddedTransactions(embeddedTransactions),
   embeddedTransactions
 );
@@ -286,7 +286,7 @@ embeddedTransactions = [
 ];
 
 // アグリゲートTx作成
-aggregateDescriptor = new sdkSymbol.descriptors.AggregateBondedTransactionV2Descriptor(
+aggregateDescriptor = new sdkSymbol.descriptors.AggregateBondedTransactionV3Descriptor(
   facade.static.hashEmbeddedTransactions(embeddedTransactions),
   embeddedTransactions
 );
@@ -483,7 +483,7 @@ embeddedTransactions = [
 ];
 
 // アグリゲートTx作成
-aggregateDescriptor = new sdkSymbol.descriptors.AggregateCompleteTransactionV2Descriptor(
+aggregateDescriptor = new sdkSymbol.descriptors.AggregateCompleteTransactionV3Descriptor(
   facade.static.hashEmbeddedTransactions(embeddedTransactions),
   embeddedTransactions
 );
@@ -547,7 +547,7 @@ embeddedTransactions = [
 ];
 
 // アグリゲートTx作成
-aggregateDescriptor = new sdkSymbol.descriptors.AggregateCompleteTransactionV2Descriptor(
+aggregateDescriptor = new sdkSymbol.descriptors.AggregateCompleteTransactionV3Descriptor(
   facade.static.hashEmbeddedTransactions(embeddedTransactions),
   embeddedTransactions
 );
